@@ -11,10 +11,6 @@ var ggImagery = new Cesium.UrlTemplateImageryProvider({
 //bing地图
 var bingMap = new Cesium.IonImageryProvider({ assetId: 2 });
 
-var imageJN = new Cesium.UrlTemplateImageryProvider({
-    url: "http://127.0.0.1:5500/resource/image2JN/{z}/{x}/{y}.png"
-});
-
 //河海影像
 var hhuImg = new Cesium.UrlTemplateImageryProvider({
     url: "http://127.0.0.1:5500/resource/hhu_img2/{z}/{x}/{y}.png"
@@ -24,12 +20,6 @@ var hhuImg = new Cesium.UrlTemplateImageryProvider({
 var hhuDem = new Cesium.CesiumTerrainProvider({
     url: "http://127.0.0.1:5500/resource/hhu_dem4"
 });
-
-//南京地形
-var njDem = new Cesium.CesiumTerrainProvider({
-    url: "http://127.0.0.1:5500/resource/dem"
-});
-
 
 var viewer = new Cesium.Viewer('cesiumContainer', {
     imageryProvider: false,

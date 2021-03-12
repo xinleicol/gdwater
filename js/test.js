@@ -182,3 +182,39 @@ function test1(){
     }
     console.log(xyz);   
 }
+
+function test2() {
+    let a = [[1,2],[1,3],[1,2]]
+    let b =  Array.from(new Set(a))
+    console.log(b);
+}
+
+function test3() {
+    let a = {
+        b : [1,2,3]
+    }
+    i = 0
+    while(a.b.length != 0){
+        c = a.b
+        console.log(c);
+        c.shift()
+        if (i < 2) {
+            c.push(i+4)
+        }
+        i++
+    }
+}
+function test4() {
+    let a = {
+        b : [1,2,3]
+    }
+    c = a.b
+    for (let i = 0; i < c.length; i++) {
+        console.log(c[i])
+        if (i == 2) {
+            c.push(4)
+            c.push(5)
+        }        
+    }
+}
+test4()
