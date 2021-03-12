@@ -87,18 +87,11 @@ function createParticle() {
         emitterInitialLocation,
         new Cesium.Matrix4()
     );//转换为四阶矩阵
-    // var offset = new Cesium.Cartesian3(0, 10, 50);
-
-    // var particalPosition = Cesium.Cartesian3.add(//按照分量求和
-    //     emitterInitialLocation,
-    //     offset,
-    //     new Cesium.Cartesian3()
-    // );//在粒子坐标系下，计算运动中粒子偏移
     let color = Cesium.Color.fromRandom(
         colorOptions[colorNum % colorOptions.length]
     );
     colorNum++;
-    scene.primitives.add(new Cesium.ParticleSystem({
+    let particleSystem = scene.primitives.add(new Cesium.ParticleSystem({
         image: getImage(),//粒子图像
         startColor: color,//开始颜色
         endColor: color.withAlpha(0.1),//结束时的颜色
@@ -112,6 +105,7 @@ function createParticle() {
         modelMatrix: modelMatrix,//决定粒子在空间坐标系的位置矩阵
         emitterModelMatrix: emitterModelMatrix//决定粒子相对于模型位置的位置矩阵
     }));
+    ParticalObject.particalSystems.push(particleSystem)
 
 }
 
@@ -129,8 +123,10 @@ var force = function (singleParticle) {
 var ParticalObject = {
     points: [],//存放污染点源位置Cartesian3
     particalSystems: [], /**粒子数组particalSystem */
-    adjacentGridCoors: [],
-
+    adjacentGridCoors: [],//污染源相邻网格坐标 不会有多个坐标
+    pollutionGridCoors:[],//被污染的污染源所在网格坐标
+    nextLayerPollutionSource:[],//存放下一层污染源坐标
+    nextLayerGridCoors:[],//下一层相邻网格坐标
     //添加一个选点事件
     selectPollutionPoint: function (handlerName) {
         //清空点源位置
@@ -175,9 +171,9 @@ var ParticalObject = {
     },
     /**根据左边三点计算元胞中心点坐标 */
     computerCenterPosition: function (x, y, z, intervalX, intervalY, intervalZ) {
-        let numberX = parseInt(x / intervalX - 1);
-        let numberY = parseInt(y / intervalY - 1);
-        let numberZ = parseInt(Math.abs(z) / intervalZ - 1);
+        let numberX = Math.floor(x / intervalX -1);
+        let numberY = Math.floor(y / intervalY -1);
+        let numberZ = Math.floor(Math.abs(z) / intervalZ -1);
         let centerX = (numberX + 0.5) * intervalX;
         let centerY = (numberY + 0.5) * intervalY;
         let centerZ = -(numberZ + 0.5) * intervalZ;
@@ -212,7 +208,7 @@ var ParticalObject = {
             particleLife: 100,//每个粒子的生存时间，即子弹被打出来后能飞多久
             speed: 10,//粒子飞行速度
             imageSize: particlePixelSize,//粒子大小
-            emissionRate: 10.0,//每秒发射粒子的个数
+            emissionRate: 5.0,//每秒发射粒子的个数
             emitter: new Cesium.BoxEmitter(),//粒子发射器的形式，确定了在什么样的区间里随机产生粒子
             lifetime: 100,//粒子发射器的生命周期，即发射粒子的时间
             updateCallback: update,//粒子位置更新回调函数
@@ -288,8 +284,21 @@ var ParticalObject = {
         this.addBoxEntities(emitterInitialLocationWorld, intervalX, intervalY, intervalZ);
         return emitterInitialLocationWorld
     },
+    /**根据世界笛卡尔坐标计算地形高度 */ 
+    computerTerrainHeight: function (centerPointWorldCoor) {
+        let pointCarto = globe.ellipsoid.cartesianToCartographic(centerPointWorldCoor)
+        //let updatedPosition = await Cesium.sampleTerrainMostDetailed(hhuDem, pointCarto);
+        return pointCarto.height
+    },
+    /**根据网格点坐标计算世界笛卡尔坐标 */
+    gridToWorldCoor: function (xGrid,yGrid,zGrid, centerPointsXYZ,modelToWorld) {
+        let pointModel = centerPointsXYZ[xGrid][yGrid][zGrid]
+        let pointModel1 = new Cesium.Cartesian3(pointModel.centerX, pointModel.centerY, pointModel.centerZ) //转换为cartesian3
+        let pointWorld = this.computerWorldPosition(modelToWorld,pointModel1)
+        return pointWorld
+    },
     /**计算污染源的相邻网格坐标 */ 
-    nextGridThisLevelID: function (lastGridThisLevelID,xNum,yNum) { //xNum yNum 存放周围的网格个数(奇数)，3*3代表以目标点为中心的9个网格
+    nextGridThisLevelID: function (lastGridThisLevelID,xNum,yNum,maxCoor,computerNum) { //xNum yNum 存放周围的网格个数(奇数)，3*3代表以目标点为中心的9个网格 computerNum为1时则是首次计算
         const x = lastGridThisLevelID[0]
         const y = lastGridThisLevelID[1]
         const z = lastGridThisLevelID[2]
@@ -302,60 +311,107 @@ var ParticalObject = {
                 if (xScrach == x & yScrach == y) {//除去自己
                     continue
                 }
-                xyzs.push([xScrach,yScrach,0])               
-                this.adjacentGridCoors.push([xScrach,yScrach,0])
+                if (xScrach < 0 | yScrach<0 | xScrach>maxCoor | yScrach>maxCoor) {//除去超限的
+                    continue
+                }
+                if (computerNum == 1) {//首次
+                    this.adjacentGridCoors.push([xScrach,yScrach,0])
+                    xyzs.push([xScrach,yScrach,0]) 
+                }else{//去重
+                    let comoputeredFlag1 = this.whetherComputered([xScrach,yScrach,0],this.adjacentGridCoors)//与上一层网格是否重复
+                    let comoputeredFlag2 = this.whetherComputered([xScrach,yScrach,0],this.nextLayerGridCoors)//与下一层网格是否重复
+                    if (!comoputeredFlag1 ) {//无重复，添加坐标
+                        xyzs.push([xScrach,yScrach,0])
+                        if (!comoputeredFlag2) {     
+                            this.nextLayerGridCoors.push([xScrach,yScrach,0])
+                        }
+                    }                   
+                }
             }            
         }
         return xyzs
+    },  
+    /**第2+n次模拟函数 判断周围网格与中心网格高程情况 对低高度的网格添加粒子系统*/
+    adjacentGridSimulate:  function (centerPoint,num,centerPointsXYZ,rightButtom3,modelToWorld,worldToModel,intervalX,intervalY,intervalZ) {
+        //let pollutionGridCoors = this.pollutionGridCoors
+        let centerPointWorldCoor = this.gridToWorldCoor(centerPoint[0],centerPoint[1],centerPoint[2],centerPointsXYZ,modelToWorld)
+        let centerHeight =  this.computerTerrainHeight(centerPointWorldCoor)//计算网格中心点高程
+        let xyzs =  this.nextGridThisLevelID(centerPoint,3,3,num-1)//计算相邻点网格坐标
+        if (xyzs.length == 0) {//没有相邻点，计算结束
+            return true
+        }
+        for (let i = 0; i < xyzs.length; i++) {
+            const eachPointGrid = xyzs[i];
+            //判断是否被污染
+            let pollutionFlag = this.whetherPolluted(eachPointGrid)
+            if (pollutionFlag) {//被污染则跳过该点
+                continue
+            }
+            let pointWorld = this.gridToWorldCoor(eachPointGrid[0],eachPointGrid[1],eachPointGrid[2],centerPointsXYZ,modelToWorld)
+            let nextGridPointHeight =  this.computerTerrainHeight(pointWorld)
+            if (nextGridPointHeight < centerHeight) {
+                this.simulateParticleEvent(eachPointGrid,centerPointsXYZ,rightButtom3,worldToModel,modelToWorld,intervalX,intervalY,intervalZ)//添加污染源
+                this.nextLayerPollutionSource.push(eachPointGrid)
+            }
+        }
+        return false
     },
-    /**根据世界笛卡尔坐标计算地形高度 */ 
-    computerTerrainHeight:async function (centerPointWorldCoor) {
-        let pointCarto = globe.ellipsoid.cartesianToCartographic(centerPointWorldCoor)
-        let updatedPosition = await Cesium.sampleTerrainMostDetailed(hhuDem, pointCarto);
-        return updatedPosition.height
+    //相邻坐标不能包含有污染源的网格,判断函数
+    whetherPolluted: function (point) {
+        const nextLayerPollutionSource = this.nextLayerPollutionSource
+        const x = point[0]
+        const y = point[1]
+        const z = point[2]
+        let pollutionFlag = false
+        for (const pollutionGridCoor of nextLayerPollutionSource) {
+            const xGoal = pollutionGridCoor[0]
+            const yGoal = pollutionGridCoor[1]
+            const zGoal = pollutionGridCoor[2]
+            if (x == xGoal & y == yGoal & zGoal == z) {
+                pollutionFlag = true//含有污染源
+                break
+            }
+        }
+        return pollutionFlag
     },
-    /**根据网格点坐标计算世界笛卡尔坐标 */
-    gridToWorldCoor: function (xGrid,yGrid,zGrid, centerPointsXYZ,modelToWorld) {
-        let pointModel = centerPointsXYZ[xGrid][yGrid][zGrid]
-        let pointModel1 = new Cesium.Cartesian3(pointModel.centerX, pointModel.centerY, pointModel.centerZ) //转换为cartesian3
-        let pointWorld = this.computerWorldPosition(modelToWorld,pointModel1)
-        return pointWorld
+    /**相邻网格不能包含上一级网格  相邻网格不能在下一层网格之中不能重复*/
+    whetherComputered: function (point,gridCoors) {
+        let comoputeredFlag = false
+        for (let k = 0; k < gridCoors.length; k++) {
+            const element = gridCoors[k]
+            const xExisted = element[0] 
+            const yExisted = element[1] 
+            const zExisted = element[2] 
+            if ((xExisted == point[0] & yExisted == point[1] & zExisted == point[2])) {
+                comoputeredFlag = true
+                break
+            }      
+        }
+        return comoputeredFlag   
+    },
+    /**上一层与下一层合并 */
+    combineTwoLayer:function () {
+        let adjacentGridCoors = this.adjacentGridCoors
+        let nextLayerGridCoors = this.nextLayerGridCoors
+        for (const gridCoors of nextLayerGridCoors) {
+            adjacentGridCoors.push(gridCoors)
+        }
+        nextLayerGridCoors = []//清空
     }
 
 }
-
-/**模拟扩散 添加粒子系统*/
-function simulate() {
-    let points = ParticalObject.points;
-    //判断是否为空
-    if (points.length == 0) {
-        console.log("请传入一个非空的粒子坐标数组！");
-        return;
-    }
-    //从粒子坐标数组取出粒子，添加粒子系统
-    points.forEach(element => {
-        let pollutionSourceLocation = element;
-
-        Cesium.Matrix4.multiplyByPoint(
-            worldToParticle,//转换矩阵
-            pollutionSourceLocation,//笛卡尔坐标系下点的坐标cartesian3，世界坐标系里
-            emitterInitialLocation//得到粒子坐标系下的位置cartesian3
-        );
-        //添加粒子系统
-        createParticle();
-    });
-
-}
-
 
 /**划分网格 */
 async function meshing() {
+   // if (num == undefined) {throw new Error('请传入一个非空的网格数量！')}
+
+    ParticalObject.pollutionGridCoors = [] //初始化
     let lon1 = ModelObject.lon1;//左边界经度
     let lon2 = ModelObject.lon2;//右边界经度
     let lat1 = ModelObject.lat1;//左边界纬度
     let lat2 = ModelObject.lat2;//右边界纬度
 
-    let num = 10;//划分网格份数
+    let num = viewModel.gridNum;//划分网格份数
 
     let updatedPositions = await ModelObject.getTerrainCartesian3([[lon1, lat1]], hhuDem);//获取地形promise对象 
     let pointHeight = updatedPositions[0].height;
@@ -412,7 +468,7 @@ async function meshing() {
     let rightButtom1 = [] 
     let rightButtom2 = []
     let rightButtom3 = [] //存放盒子右上角点坐标
-    let centerPointsTransfrom = [];//元胞中心的世界笛卡尔坐标
+   // let centerPointsTransfrom = [];//元胞中心的世界笛卡尔坐标
     for (let k = 0; k < num; k++) {
         centerPointsYZ = []
         rightButtom2 = [] 
@@ -425,8 +481,8 @@ async function meshing() {
                 const zCorner = -nodeZ[i]
                 let point = ParticalObject.computerCenterPosition(xCorner, yCorner, zCorner, intervalX, intervalY, intervalZ);
                 let positionCartesian3 = new Cesium.Cartesian3(point.centerX, point.centerY, point.centerZ);
-                let position = ParticalObject.computerWorldPosition(modelToWorld, positionCartesian3);
-                centerPointsTransfrom.push(position);
+                // let position = ParticalObject.computerWorldPosition(modelToWorld, positionCartesian3);
+                // centerPointsTransfrom.push(position);
                 centerPointsZ[i] = point 
                 rightButtom1[i] = {'x':xCorner,'y':yCorner,'z':zCorner}
             }
@@ -441,14 +497,36 @@ async function meshing() {
     let results = ParticalObject.judgePollutionPoint(points,worldToModel,intervalX,intervalY,intervalZ)//判断污染源的网格坐标
     for (const pointCoor of results) {
         let centerPointWorldCoor = ParticalObject.simulateParticleEvent(pointCoor,centerPointsXYZ,rightButtom3,worldToModel,modelToWorld,intervalX,intervalY,intervalZ)//添加污染源
-        let centerHeight = await ParticalObject.computerTerrainHeight(centerPointWorldCoor)//计算网格中心点高程
-        let xyzs =  ParticalObject.nextGridThisLevelID(pointCoor,3,3)//计算相邻点网格坐标
+        let centerHeight =  ParticalObject.computerTerrainHeight(centerPointWorldCoor)//计算网格中心点高程
+        let xyzs =  ParticalObject.nextGridThisLevelID(pointCoor,3,3,num-1,1)//计算相邻点网格坐标
         for (const eachPointGrid of xyzs) {
             let pointWorld = ParticalObject.gridToWorldCoor(eachPointGrid[0],eachPointGrid[1],eachPointGrid[2],centerPointsXYZ,modelToWorld)
-            let nextGridPointHeight = await ParticalObject.computerTerrainHeight(pointWorld)
+            let nextGridPointHeight =  ParticalObject.computerTerrainHeight(pointWorld)
             if (nextGridPointHeight < centerHeight) {
                 ParticalObject.simulateParticleEvent(eachPointGrid,centerPointsXYZ,rightButtom3,worldToModel,modelToWorld,intervalX,intervalY,intervalZ)//添加污染源
+                ParticalObject.nextLayerPollutionSource.push(eachPointGrid)
             }
+        }
+    }
+    
+    //遍历污染源
+    let pollutionGridCoors = ParticalObject.pollutionGridCoors
+    let nextLayerPollutionSource = ParticalObject.nextLayerPollutionSource
+    pollutionGridCoors.push(nextLayerPollutionSource)//首次添加
+    // for (let i = 0; i < 2; i++) {
+    //     const centerPoint = centerPoints[i]
+    //     await ParticalObject.adjacentGridSimulate(centerPoint,num,centerPointsXYZ,rightButtom3,modelToWorld,worldToModel,intervalX,intervalY,intervalZ)
+    // }
+    for (let i = 0; i < ParticalObject.pollutionGridCoors.length; i++) {// ParticalObject.pollutionGridCoors.length
+        ParticalObject.nextLayerPollutionSource = [] //清空下层污染源
+        let currentLayerPollutionSources = pollutionGridCoors[i]//当前层污染源
+        for (let j = 0; j < currentLayerPollutionSources.length; j++) {
+             const pollutionPoint = currentLayerPollutionSources[j] 
+                ParticalObject.adjacentGridSimulate(pollutionPoint,num,centerPointsXYZ,rightButtom3,modelToWorld,worldToModel,intervalX,intervalY,intervalZ)          
+        }
+        if (ParticalObject.nextLayerPollutionSource.length != 0) {        
+            pollutionGridCoors.push(ParticalObject.nextLayerPollutionSource)     //添加下层污染源  
+            ParticalObject.combineTwoLayer()//添加下层相邻网格  
         }
     }
 
@@ -473,7 +551,6 @@ function surfaceDiffusion() {
         return;
         
     }
-
      //粒子更新函数
     async function update(particle, dt) {
         let offsetValue = 5;
@@ -532,7 +609,6 @@ function surfaceDiffusion() {
 
     }
 
-
     ParticalObject.points.forEach(element => {
        
         let emitterInitialLocation = Cesium.Matrix4.multiplyByPoint(
@@ -563,7 +639,6 @@ function surfaceDiffusion() {
         ParticalObject.particalSystems.push(particalSystem)
     
     });
-
     ParticalObject.points.length = 0;//清空污染点  
 
 }
@@ -576,8 +651,28 @@ function stopSurfaceDiffusion() {
     })
     MeasureObject.removePoint();
 }
+/**模拟扩散 添加粒子系统*/
+function simulate() {
+    let points = ParticalObject.points;
+    //判断是否为空
+    if (points.length == 0) {
+        console.log("请传入一个非空的粒子坐标数组！");
+        return;
+    }
+    //从粒子坐标数组取出粒子，添加粒子系统
+    points.forEach(element => {
+        let pollutionSourceLocation = element;
 
+        Cesium.Matrix4.multiplyByPoint(
+            worldToParticle,//转换矩阵
+            pollutionSourceLocation,//笛卡尔坐标系下点的坐标cartesian3，世界坐标系里
+            emitterInitialLocation//得到粒子坐标系下的位置cartesian3
+        );
+        //添加粒子系统
+        createParticle();
+    });
 
+}
 
 // View in east-north-up frame
 // var camera = viewer.camera;
@@ -594,3 +689,4 @@ function stopSurfaceDiffusion() {
 //         length: 1000.0,
 //     })
 // );
+

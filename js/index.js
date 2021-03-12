@@ -99,25 +99,24 @@ var ModelObject = {
 
 var boxModel = ModelObject.computerBoxPosition();
 
-var nearAlpha = 0.5;
-var trBox = viewer.entities.add({
-    name: "土壤模型",
-    position: boxModel[0],
-    box: {
-        dimensions: new Cesium.Cartesian3(boxModel[1], boxModel[2], -100.0),
-        material: Cesium.Color.BURLYWOOD.withAlpha(nearAlpha),
-        outline: true,
-        outlineColor: Cesium.Color.BURLYWOOD,
-        heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,//贴地
-         show: false,
-    },
+// var nearAlpha = 0.5;
+// var trBox = viewer.entities.add({
+//     name: "土壤模型",
+//     position: boxModel[0],
+//     box: {
+//         dimensions: new Cesium.Cartesian3(boxModel[1], boxModel[2], -100.0),
+//         material: Cesium.Color.BURLYWOOD.withAlpha(nearAlpha),
+//         outline: true,
+//         outlineColor: Cesium.Color.BURLYWOOD,
+//         heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,//贴地
+//          show: false,
+//     },
     
 
-});
+// });
 
 
 function load() {
-
     viewer.camera.setView({
         destination: boxModel[3]
     });
@@ -146,68 +145,6 @@ function load() {
 globe.baseColor = Cesium.Color.BLACK; //变黑
 scene.screenSpaceCameraController.enableCollisionDetection = false; //相机对地形的碰撞检测
 
-
-//页面控件数据
-var viewModel = {
-    simulateEnable: false,//是否开启选污染点事件
-    handleEnable: false,//是否开启基础事件
-    enabled: true,
-    nearAlpha: nearAlpha,
-    getlocationEnable: false,
-};
-
-Cesium.knockout.track(viewModel);
-var toolbar = document.getElementById("toolbar");
-Cesium.knockout.applyBindings(viewModel, toolbar);
-
-for (var name in viewModel) {
-    if (viewModel.hasOwnProperty(name)) {
-        Cesium.knockout.getObservable(viewModel, name).subscribe(update);
-    }
-}
-
-function update() {
-    globe.translucency.enabled = viewModel.enabled ? true : false;
-    globe.translucency.frontFaceAlphaByDistance = new Cesium.NearFarScalar(
-        0,
-        0.0,
-        200.0,
-        1.0
-    );
-    var nearAlpha = Number(viewModel.nearAlpha);
-    nearAlpha = nearAlpha >= 1.0 ? 1.0 : nearAlpha;
-    viewModel.nearAlpha = nearAlpha;
-    trBox.box.material = Cesium.Color.BURLYWOOD.withAlpha(nearAlpha);
-
-    //判断是否开启坐标拾取
-    // var getlocationEnable = viewModel.getlocationEnable;
-    // if (getlocationEnable) {
-    //     getlocation();
-    //     addPositionLabel();
-    // } else {
-    //     handler.removeInputAction(Cesium.ScreenSpaceEventType.LEFT_CLICK);//清除鼠标单击事件
-    //     viewer.entities.remove(positionLabel);//清除lable
-    // }
-
-    /**判断是否开启鼠标交互事件 
-     * 对应坐标拾取等一系列操作
-    */
-    // if (!viewModel.handleEnable) {
-    //     handler.removeInputAction(Cesium.ScreenSpaceEventType.LEFT_CLICK);
-    //     handler.removeInputAction(Cesium.ScreenSpaceEventType.RIGHT_CLICK);
-    // }
-
-    /**
-     * 判断是否开启选择污染点
-     */
-    if (!viewModel.simulateEnable) {
-        handler.removeInputAction(Cesium.ScreenSpaceEventType.LEFT_CLICK);
-    } else {
-        ParticalObject.selectPollutionPoint(handler);
-    }
-
-}
-update();
 //监听数据
 // function subscribeParameter(name) {
 //     Cesium.knockout

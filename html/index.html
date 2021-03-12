@@ -56,19 +56,12 @@
                 </td>
             </tr>
             <tr>
-                <td>
-                    拾取坐标
-                </td>
-                <td>
-                    <input type="checkbox" data-bind="checked: getlocationEnable">
-                </td>
-            </tr>
-            <tr>
                
                 <td>
                     <input type="checkbox" data-bind="checked: handleEnable">
                 </td>
                 <td id="baseToolbar"></td>
+                <td><button class="cesium-button" onclick="clearBaseOptions()">清除</button></td>
             </tr>
             <tr>
                 <td>
@@ -77,13 +70,17 @@
                 <td>
                    选择污染点
                 </td>
-                <td>
-                    <button onclick="simulate()" class="cesium-button">模拟扩散</button>
-                </td>
+                <td><button onclick="surfaceDiffusion()" class="cesium-button">地表扩散</button></td>  
             </tr>
             <tr>
-                <td><button onclick="meshing()" class="cesium-button">划分网格</button></td>
-                <td><button onclick="surfaceDiffusion()" class="cesium-button">地表扩散</button></td>
+                <td>网格数量</td>
+                <td><input type="range" min="5" max="50" step="1"
+                    data-bind="value: gridNum, valueUpdate: 'input'">
+                <input type="text" size="1" data-bind="value: gridNum"></td>
+            </tr>
+            <tr>
+                <td><button onclick="meshing()" class="cesium-button">三维模拟</button></td>
+                <td><button onclick="simulate()" class="cesium-button">添加粒子</button></td>
                 <td><button onclick="stopSurfaceDiffusion()" class="cesium-button">清除</button></td>
             </tr>
 
@@ -91,7 +88,8 @@
     </div>
     <script  src="../js/index.js"></script>
     <script src="../js/base.js"></script>
-    <script src="../js/partical.js"></script>
+    <script  src="../js/partical.js"></script>
+    <script src="../js/observer.js"></script>
     </div>
 </body>
 

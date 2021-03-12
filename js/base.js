@@ -1,20 +1,9 @@
 
 /**
  * 1 获取地形坐标 
- * 2 使用起泡label展示
+ * 2 使用气泡label展示
  */
-var positionLabel;
-function addPositionLabel() {
-    positionLabel = viewer.entities.add({
-        label: {
-            show: false,
-            showBackground: true,
-            font: '14px sans-serif',
-            heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
-            fillColor: Cesium.Color.SKYBLUE,
-        }
-    });
-}
+
 var pollutionSourceLocation;
 function getlocation() {
     handler.removeInputAction(Cesium.ScreenSpaceEventType.LEFT_CLICK);
@@ -25,14 +14,11 @@ function getlocation() {
             return;
         }
         let earthPositionCartesian3 = MeasureObject.getPointCartesian3(event)
-        // let earthPositionCartesian3 = new Cesium.Cartesian3();
-        // scene.pickPosition(event.position, earthPositionCartesian3); //获取到地形图上面的坐标
+        let positionLabel = MeasureObject.addPositionLabel()
         positionLabel.position = earthPositionCartesian3;
        
         positionLabel.label.show = true;
-        var ellipsoid = globe.ellipsoid;
-       
-        var cartographic = ellipsoid.cartesianToCartographic(earthPositionCartesian3);
+        var cartographic = globe.ellipsoid.cartesianToCartographic(earthPositionCartesian3);
         var choiceLat = Cesium.Math.toDegrees(cartographic.latitude);
         var choiceLng = Cesium.Math.toDegrees(cartographic.longitude);
         var choiceAlt = cartographic.height;
@@ -41,7 +27,7 @@ function getlocation() {
 高度：`+ choiceAlt;
         positionLabel.label.text = labelText;
 
-        pollutionSourceLocation = earthPositionCartesian3;//赋值给污染源
+       // pollutionSourceLocation = earthPositionCartesian3;//赋值给污染源
         // console.log(pollutionSourceLocation);
     }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
@@ -50,10 +36,10 @@ function getlocation() {
 
 /**创建对象*/
 var MeasureObject = {
-    pointLineEntity: null,//指示线段
+    pointLineEntities: null,//指示线段
     positionFloat: null,//鼠标移动位置的端点
     pointEntities: [],
-
+    labelEntities:[],//标签
     //添加点
     addPoint: function (position) {
         let pointEntitiy = viewer.entities.add({
@@ -160,7 +146,6 @@ var MeasureObject = {
             const element2 = points[index + 1];
             const distance = this.getSpaceDistance(element1, element2);
             distances.push(distance);
-
         }
 
         //计算首尾点的线段长
@@ -174,6 +159,19 @@ var MeasureObject = {
         let p = d1 + d2 + d3;//周长
         let s = Math.sqrt(p * (p - d1) * (p - d2) * (p - d3));
         return s;
+    },
+    addPositionLabel:function () {
+        let positionLabel = viewer.entities.add({
+            label: {
+                show: false,
+                showBackground: true,
+                font: '14px sans-serif',
+                heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+                fillColor: Cesium.Color.SKYBLUE,
+            }
+        });
+        this.labelEntities.push(positionLabel)
+        return positionLabel
     }
 
 
@@ -195,21 +193,16 @@ function measureLineSpace() {
             MeasureObject.addPoint(earthPositionCartesian3); // 存储第一个点，并在点击处绘制一个点entity 
         }
         if (positions.length == 2) {
-
             let point1 = positions[0];
             let point2 = positions[1];
 
             //添加点，更新线段
             MeasureObject.addPoint(point2);
             MeasureObject.updatePointLine(point1, point2);
-
-
             //计算距离
             let textDisance = MeasureObject.getSpaceDistance(point1, point2);
-
             //添加提示框
             MeasureObject.addLabel(point2, textDisance);
-
             //清空数组
             positions = [];
 
@@ -310,10 +303,8 @@ function measureArea() {
                 let pts = [positions[0], positions[i + 1], positions[i + 2]];
                 area += MeasureObject.getTriangleArea(pts);
             }
-            console.log(area);
-
             MeasureObject.addLabel(positions[positions.length - 1], area);
-
+            positions = []
         }
 
 
@@ -321,12 +312,23 @@ function measureArea() {
 
 }
 
+function clearBaseOptions() {
+    MeasureObject.labelEntities.forEach((element)=>{
+        viewer.entities.remove(element)
+    })
+    MeasureObject.pointEntities.forEach(element => {
+        viewer.entities.remove(element)
+    })
+    MeasureObject.pointLineEntity = null
+    MeasureObject.labelEntities = []
+}
+
 window.onload = function () {
     Sandcastle.addToolbarMenu([
         {
             text: "拾取坐标",
             onselect: function () {
-                addPositionLabel();
+                // addPositionLabel();
                 getlocation();
             }
         },
