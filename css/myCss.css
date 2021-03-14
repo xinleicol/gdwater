@@ -1,0 +1,23 @@
+#toolbar {
+    background: rgba(42, 42, 42, 0.8);
+    padding: 4px;
+    border-radius: 4px;
+    display: flex;
+}
+
+#toolbar table tr {
+    transform: translateY(0);
+    transition: transform 1s ease-out;
+}
+
+#toolbar table td {
+    transform: translateY(0);
+    padding: 4px;
+    transition: margin-right 1s;
+}
+
+#toolbar input {
+    vertical-align: middle;
+    padding-top: 2px;
+    padding-bottom: 2px;
+}

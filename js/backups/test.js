@@ -167,6 +167,109 @@ async function meshing() {
     );
 }
 
+/**模拟地表污染扩散 */
+function surfaceDiffusion() {
+    let points = ParticalObject.points
+    let heigthBefore = points[0]
+     
+    let modelMatrixCom = ParticalObject.computerModelMatrix(modelMatrix);
+    if ( ParticalObject.points.length == 0) {
+        console.log("请选择污染源！");
+        return;
+        
+    }
+     //粒子更新函数
+    async function update(particle, dt) {
+        let offsetValue = 5;
+        let offsetX = Cesium.Math.randomBetween(-offsetValue,offsetValue);
+        let offsetY = Cesium.Math.randomBetween(-offsetValue,offsetValue);
+        let offsetCartesian = new Cesium.Cartesian3(offsetX, offsetY, 0) 
+        // let offsetX = new Cesium.Cartesian3(5, 0, 0) //相邻点偏移量
+        // let offsetY = new Cesium.Cartesian3(0,5,0)
+        let position = particle.position
+        
+        //particle.velocity = Cesium.Cartesian3.UNIT_X;//会报错，不能直接赋值
+        // Cesium.Cartesian3.clone(
+        //     new  Cesium.Cartesian3(0, 0, -1),
+        //         particle.velocity
+        // );
+       
+        //转换为模型坐标
+        let positionScratch = Cesium.Matrix4.multiplyByPoint(
+            modelMatrixCom.worldToModel,
+            position,
+            new Cesium.Cartesian3()
+        );
+
+        //偏移
+        let positionOffset = Cesium.Cartesian3.add(positionScratch, offsetCartesian, new Cesium.Cartesian3())
+        // console.log(positionScratch+":"+positionOffset);
+
+        //转换为世界坐标
+        let positionOffsetScratch = Cesium.Matrix4.multiplyByPoint(
+            modelMatrixCom.modelToWorld,
+            positionOffset,
+            new Cesium.Cartesian3()
+        );
+
+        //根据x,y计算地形高度
+        let beforePositionCarto = Cesium.Cartographic.fromCartesian(position, Cesium.Ellipsoid.WGS84, new Cesium.Cartographic())
+        let newPositionCarto=  Cesium.Cartographic.fromCartesian(positionOffsetScratch, Cesium.Ellipsoid.WGS84, new Cesium.Cartographic())
+        
+        let beforePosition =  await Cesium.sampleTerrainMostDetailed(hhuDem, beforePositionCarto)
+        let newPosition = await Cesium.sampleTerrainMostDetailed(hhuDem, newPositionCarto)
+        let differenceHeight = newPosition.height - beforePosition.height
+        //改天继续-20210203
+        if (differenceHeight <0) {
+            // let velocity = Cesium.Cartesian3.add(offsetCartesian, new Cesium.Cartesian3(0,0,differenceHeight), new Cesium.Cartesian3())
+            particle.position =  positionOffsetScratch
+          
+        }else{
+           
+            // Cesium.Cartesian3.clone(
+            //     Cesium.Cartesian3.ZERO,
+            //     particle.velocity
+            // );
+        }
+
+        //失败了，换种思路？20200203
+
+    }
+
+    ParticalObject.points.forEach(element => {
+       
+        let emitterInitialLocation = Cesium.Matrix4.multiplyByPoint(
+            modelMatrixCom.worldToModel,//转换矩阵
+            element,//笛卡尔坐标系下点的坐标cartesian3，世界坐标系里
+            new Cesium.Cartesian3()//得到粒子坐标系下的位置cartesian3
+        );
+
+        let emitterModelMatrix = Cesium.Matrix4.fromTranslation(
+            emitterInitialLocation,
+            new Cesium.Matrix4()
+        );//转换为四阶矩阵
+
+        //添加粒子系统
+        let particalSystem = scene.primitives.add(new Cesium.ParticleSystem({
+            image: getImage(),//粒子图像
+            color: Cesium.Color.CYAN,//开始颜色
+            particleLife: 100,//每个粒子的生存时间，即子弹被打出来后能飞多久
+            speed: 0.1,//粒子飞行速度
+            imageSize: particlePixelSize,//粒子大小
+            emissionRate: 5.0,//每秒发射粒子的个数
+            emitter: new Cesium.BoxEmitter(),//粒子发射器的形式，确定了在什么样的区间里随机产生粒子
+            lifetime: 100,//粒子发射器的生命周期，即发射粒子的时间
+            updateCallback: update,//粒子位置更新回调函数
+            modelMatrix: modelMatrix,//决定粒子在空间坐标系的位置矩阵
+            emitterModelMatrix: emitterModelMatrix//决定粒子相对于模型位置的位置矩阵
+        }));
+        ParticalObject.particalSystems.push(particalSystem)
+    
+    });
+    ParticalObject.points.length = 0;//清空污染点  
+
+}
+
 function test1(){
     x = []
     xy = []
