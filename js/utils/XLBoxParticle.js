@@ -1,4 +1,6 @@
-class XLBoxParticle{
+import XLBox from './XLBox.js'
+
+class XLBoxParticle extends XLBox{
     _centerPosition=null
     _url = 'http://127.0.0.1:5500/image/whatever.jpg'
     _particleStyle={}
@@ -8,12 +10,13 @@ class XLBoxParticle{
     _update = function () {}
 
     constructor(centerPosition,emitterInitialLocation){
+        super()
         if (emitterInitialLocation) {
             this._emitterInitialLocation = emitterInitialLocation
             this._emitterInitialLocation = XLBoxParticle.computerEmitterModelMatrix(emitterInitialLocation)
         }
         this._centerPosition = centerPosition
-        this._modelMatrix = XLBoxParticle.computerModelMatrix(centerPosition)
+        this._modelMatrix = this.computerModelMatrix(centerPosition)
     }
 
     generate(){
@@ -37,10 +40,6 @@ class XLBoxParticle{
         
     }
 
-    static computerModelMatrix(centerPosition){
-        return Cesium.Transforms.eastNorthUpToFixedFrame(centerPosition)
-    }
-
     static computerEmitterModelMatrix(emitterInitialLocation){
        return Cesium.Matrix4.fromTranslation(
             emitterInitialLocation,
@@ -62,7 +61,15 @@ class XLBoxParticle{
     }
 
     raiseToTop(){
-        scene.primitives.raiseToTop(this._particalSystems)
+        scene.primitives.raiseToTop(this._particalSystem)
+    }
+
+    updateFun(fun){
+        if (typeof(fun) == 'function') {
+            this._particalSystem.updateCallback = fun  
+        }else{
+            throw new TypeError('请传入一个粒子更新函数...')
+        }
     }
 }
 

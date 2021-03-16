@@ -1,9 +1,12 @@
-class XLBoxGeometry{
+import XLBox from './XLBox.js'
+
+class XLBoxGeometry extends XLBox{
     _centerPoint = null
     _dimensions = null
     _offsets = []
     _geometryInstances = []
     constructor(centerPoint,dimensions,offsets){
+        super()
         this._centerPoint = centerPoint
         this._dimensions = dimensions
         this._offsets = offsets
@@ -21,8 +24,8 @@ class XLBoxGeometry{
         for (const offset of this._offsets) {
             let instance = new Cesium.GeometryInstance({
                 geometry: geometry,
-                modelMatrix: Cesium.Matrix4.multiplyByTranslation(Cesium.Transforms.eastNorthUpToFixedFrame(
-                    this._centerPoint), 
+                modelMatrix: Cesium.Matrix4.multiplyByTranslation(
+                    (this.computerModelMatrix(this._centerPoint)), 
                     offset,
                     new Cesium.Matrix4()),
                 attributes: {
