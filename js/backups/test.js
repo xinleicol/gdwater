@@ -320,4 +320,3 @@ function test4() {
         }        
     }
 }
-test4()

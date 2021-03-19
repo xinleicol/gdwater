@@ -25,7 +25,7 @@ class XLBoxPosition extends XLBox{
     constructor(boxCenterPosition,length,width,height){
         super()
         super.determineType(boxCenterPosition)
-        this._boxCenterPosition = boxCenterPosition //super.computerModelPositionFromCenter(boxCenterPosition,centerPosition)
+        this._boxCenterPosition = boxCenterPosition 
         this._halfLen = length / 2
         this._halfWid = width / 2
         this._halfhei = height / 2

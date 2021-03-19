@@ -59,7 +59,7 @@ class XLBox{
     /**
      * 计算点的世界坐标
      * @param {目标点模型坐标} modelPosition 
-     * @param {模型原点坐标} centerPosition 
+     * @param {模型原点世界坐标} centerPosition 
      */
     computerWorldPositionFromCenter(modelPosition,centerPosition){
         let modelMatrix = this.computerModelMatrix(centerPosition)

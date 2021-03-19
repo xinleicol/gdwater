@@ -34,6 +34,7 @@ imagerylayerCollections.raiseToTop(hhuImgLayer);
 
 var scene = viewer.scene;
 var globe = scene.globe;
+var camera = viewer.camera;
 var handler = new Cesium.ScreenSpaceEventHandler(viewer.canvas); //开启事件
 viewer.terrainProvider = hhuDem; //加载地形
 
