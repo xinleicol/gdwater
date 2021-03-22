@@ -3,15 +3,16 @@
  * 
  */
 class XLComputer{
-    _m = 0.084
-    _d = 0.16
-    _kdiffs = []
-    _rows = 9
-    _columns = 9
-    _halfGridX = Math.floor(this._columns /2)
-    _halfGridY = Math.floor(this._rows /2)
-    spreadArea = undefined
-    isPollutedArea = []
+    _m = 0.084 //静态扩散系数
+    _d = 0.16 //斜向扩散系数
+    _kdiffs = [] 
+    _rows = 9 //行数，Y
+    _columns = 9 //列数，X
+    _halfGridX = Math.floor(this._columns /2) // 元胞区域X方向半长
+    _halfGridY = Math.floor(this._rows /2) //元胞区域Y方向半长
+    spreadArea = undefined //所有元胞对象数组
+    isPollutedArea = [] //所有被污染的元胞数组
+    nextPollutedArea = [] //下一时刻将被污染的元胞数组
     constructor(heightMatrix,mass,rows,columns){
         this._heightMatrix = heightMatrix
         this._mass = mass
@@ -34,10 +35,14 @@ class XLComputer{
                     'position':[i,j],
                     'cellMass':this._mass[i][j],
                     'elevation':this._heightMatrix[i][j],
+                    'kdiff':0.0,
                     'boundary':'noBoundary',
                     'isPolluted':false,
-                    'isMassUpdate':false,
-                    'beforeCellMass':0.0,
+                    'fatherNode':null, //父节点
+                    'childNode':[], //子节点
+                    'particlePool':[], //粒子池(弃用)
+                    'isMassUpdate':false, //弃用
+                    'beforeCellMass':0.0, //弃用
                 }               
                 if (i == 0 ) {
                     this.spreadArea[i][j].boundary = 'topBoundary'
@@ -84,67 +89,125 @@ class XLComputer{
         let kdiffs = []
         for (let m = i-1; m < i+2; m++) {
             for (let n = j-1; n < j+2; n++) {
-                const element = this._heightMatrix[m][n]
-                hfull += Math.abs(element - center)
+                const element = heightMatrix[m][n]
+                let heightDiff = center-element
+                if (heightDiff>0) {
+                    hfull += heightDiff
+                }
             }            
         }
-        kdiffs[0] = Math.abs((heightMatrix[i-1][j-1] -center))/ hfull
-        kdiffs[1] = Math.abs((heightMatrix[i-1][j]-center)   )/ hfull
-        kdiffs[2] = Math.abs((heightMatrix[i-1][j]-center)   )/ hfull
-        kdiffs[3] = Math.abs((heightMatrix[i][j-1] -center)  )/ hfull
-        kdiffs[4] = Math.abs((heightMatrix[i][j]   -center)  )/ hfull
-        kdiffs[5] = Math.abs((heightMatrix[i][j+1] -center)  )/ hfull
-        kdiffs[6] = Math.abs((heightMatrix[i+1][j-1] -center))/ hfull
-        kdiffs[7] = Math.abs((heightMatrix[i+1][j]   -center))/ hfull
-        kdiffs[8] = Math.abs((heightMatrix[i+1][j+1] -center))/ hfull
+        if (hfull == 0) {//临近元胞高程都大于中心，谷点
+            return 0
+        }
+        let k = 0
+        for (let m = i-1; m < i+2; m++) {
+            for (let n = j-1; n < j+2; n++) {
+                const element = heightMatrix[m][n]
+                let heightDiff = center-element
+                if (heightDiff >0) {
+                    let kdiff = heightDiff / hfull
+                    kdiffs[k] = heightDiff / hfull
+                    this.spreadArea[m][n].kdiff = kdiff
+                }else{
+                    kdiffs[k] = 0
+                }
+                k ++
+            }            
+        }
+        // kdiffs[0] = (heightMatrix[i-1][j-1] -center)/ hfull
+        // kdiffs[1] = (heightMatrix[i-1][j]-center)   / hfull
+        // kdiffs[2] = (heightMatrix[i-1][j]-center)   / hfull
+        // kdiffs[3] = (heightMatrix[i][j-1] -center)  / hfull
+        // kdiffs[4] = (heightMatrix[i][j]   -center)  / hfull
+        // kdiffs[5] = (heightMatrix[i][j+1] -center)  / hfull
+        // kdiffs[6] = (heightMatrix[i+1][j-1] -center)/ hfull
+        // kdiffs[7] = (heightMatrix[i+1][j]   -center)/ hfull
+        // kdiffs[8] = (heightMatrix[i+1][j+1] -center)/ hfull
         this._kdiffs = kdiffs
         return kdiffs
     }
 
     /**
-     * 计算一个元胞的污染物质量
+     * 计算中央元胞的污染物质量，并更新周围元胞的污染物质量
      * @param {元胞行号} i 
      * @param {元胞列号} j 
      * @returns 每个元胞新的污染物质量
      */
     _computerNewMass(i,j){
-        const m = this._m
-        const d = this._d
+        const mxshu = this._m
+        const dxshu = this._d
         const centerMass = this.spreadArea[i][j].cellMass
+        this.nextPollutedArea = [] //清空下个时刻被污染的元胞数组
         let kdiffs = this._computerKdiff(i,j)
-        let newMass = centerMass
-        +m * (kdiffs[1]*(this.spreadArea[i-1][j].cellMass - centerMass)
-        +kdiffs[7] *(this.spreadArea[i+1][j].cellMass -centerMass)
-        +kdiffs[3]*(this.spreadArea[i][j-1].cellMass - centerMass)
-        +kdiffs[5]* (this.spreadArea[i][j+1].cellMass -centerMass))
-        +m* d *(kdiffs[0]*(this.spreadArea[i-1][j-1].cellMass - centerMass)
-        +kdiffs[2]*(this.spreadArea[i-1][j+1].cellMass -centerMass)
-        +kdiffs[6] *(this.spreadArea[i+1][j-1].cellMass -centerMass)
-        +kdiffs[8] *(this.spreadArea[i+1][j+1].cellMass -centerMass))
+        if (typeof kdiffs == "number" & kdiffs == 0) {//遇到谷点，返回原来的值
+            return centerMass
+        }
+        
+        let k = 0
+        let crossMass = 0.0
+        let inclineMass = 0.0
+        for (let m = i-1; m < i+2; m++) {
+            for (let n = j-1; n < j+2; n++) {
+                let currentMass = this.spreadArea[m][n].cellMass
+                if (kdiffs[k] > 0 ) {
+                    if (k %2 == 1) {
+                        let updateCellMass = mxshu* (kdiffs[k])*(currentMass -centerMass)
+                        this.spreadArea[m][n].cellMass += -updateCellMass //更新下个污染元胞的质量
+                        crossMass += updateCellMass // 当前元胞的静态扩散量
+                        
+                    }else{
+                        let updateCellMass = mxshu* dxshu * (kdiffs[k])*(currentMass - centerMass) 
+                        this.spreadArea[m][n].cellMass += -updateCellMass
+                        inclineMass += updateCellMass
+                    }
+                    if (! this.spreadArea[m][n].isPolluted) {
+                        this.spreadArea[m][n].isPolluted = true //表示当前元胞已被污染
+                        this.isPollutedArea.push(this.spreadArea[m][n]) //表示所有污染元胞的集合
+                        this.spreadArea[m][n].fatherNode = this.spreadArea[i][j].position //为该节点添加父节点
+                        this.spreadArea[i][j].childNode.push(this.spreadArea[i][j].position) //为该节点添加父节点
+                    }
+                    this.nextPollutedArea.push(this.spreadArea[m][n])
+                }
+                k ++
+            }
+        }
+        let newMass = centerMass + crossMass + inclineMass
+        this.spreadArea[i][j].cellMass = newMass
         return newMass
+        
+        // let newMass = centerMass
+        // +m * (kdiffs[1]*(this.spreadArea[i-1][j].cellMass - centerMass)
+        // +kdiffs[7] *(this.spreadArea[i+1][j].cellMass -centerMass)
+        // +kdiffs[3]*(this.spreadArea[i][j-1].cellMass - centerMass)
+        // +kdiffs[5]* (this.spreadArea[i][j+1].cellMass -centerMass))
+        // +m* d *(kdiffs[0]*(this.spreadArea[i-1][j-1].cellMass - centerMass)
+        // +kdiffs[2]*(this.spreadArea[i-1][j+1].cellMass -centerMass)
+        // +kdiffs[6] *(this.spreadArea[i+1][j-1].cellMass -centerMass)
+        // +kdiffs[8] *(this.spreadArea[i+1][j+1].cellMass -centerMass))
+        // return newMass
     }
 
     /**
-     * 计算元胞一次模拟后的临近3*3元胞的污染物质量
+     * 计算元胞一次模拟后的临近3*3元胞的污染物质量（废弃）
      * @param {污染源行号} i 
      * @param {污染源列号} j 
      * 
      */
-    computerCellMass(i,j){
+    _computerCellMass(i,j){
         let currentSpreadArea = this.spreadArea[i][j]
-        //let updateSpreadArea = []
+        let updateSpreadArea = [] //下个时刻会被污染的元胞对象
         if (currentSpreadArea.boundary == 'noBoundary') {  //当前元胞无边界  
-            for (let m = i-1; m < i+1; m++) {
-                for (let n = j-1; n < j+1; n++) {
+            for (let m = i-1; m < i+2; m++) {
+                for (let n = j-1; n < j+2; n++) {
                     let nearSpreadArea = this.spreadArea[m][n]
                     if (nearSpreadArea.boundary == 'noBoundary') { //相邻元胞无边界
                         let newMass = this._computerNewMass(m,n)        
-                        if (newMass != 0) { //质量不为0则更新
+                        if (newMass > 0) { //质量大于0则更新
                             nearSpreadArea.beforeCellMass = newMass
                             // nearSpreadArea.isPolluted = true
                             nearSpreadArea.isMassUpdate = true
-                            if (! nearSpreadArea.isPolluted) { //已被污染
-                                // updateSpreadArea.push(nearSpreadArea)
+                            if (! nearSpreadArea.isPolluted) { //未被污染则更新
+                                updateSpreadArea.push(nearSpreadArea)
                                 this.isPollutedArea.push(nearSpreadArea)
                                 nearSpreadArea.isPolluted = true
                             }
@@ -153,11 +216,23 @@ class XLComputer{
                 }
             }
         }
-        //return updateSpreadArea
+        return updateSpreadArea
     }
 
     /**
-     * 更新一个时态后的元胞污染质量
+     * 污染物质量计算、更新的入口函数
+     * @param {被污染的元胞对象} currentSpreadArea 
+     */
+    computerCellMass(currentSpreadArea){
+        if (currentSpreadArea.boundary == 'noBoundary') {  //当前元胞无边界  
+            let position = currentSpreadArea.position
+            this._computerNewMass(position[0],position[1])
+            return this.nextPollutedArea
+        }
+    }
+
+    /**
+     * 更新一个时态后的元胞污染质量(废弃)
      */
     updateCellMass(){
         for (let i = 0; i < this._rows; i++) {
@@ -171,20 +246,34 @@ class XLComputer{
     }
 
     /**
+     *（废弃）
+     * @param {第一个元胞对象} grid1 
+     * @param {第二个元胞对象} grid2 
+     * @returns  判断第一个元胞高程是否小于第二个，小于为真，大于为假
+     */
+    heightIsLess(grid1,grid2){
+        if(Cesium.defined(grid1.elevation) & Cesium.defined(grid2.elevation)){
+            return grid1.elevation - grid2.elevation < 0 ? true:false
+        }
+    }
+
+    /**
      * 将数组索引转化为元胞所处的模型坐标
      * @param {网格坐标} girdPosition 
      * @param {元胞的长宽高} dimensions 
+     * @param {元胞中点相对模型的偏移量（元胞中心的模型坐标）} offset 
      * @returns 元胞中心在模型下的坐标 
      */
-    convertToModelPosition(girdPosition,dimensions){
-        let modelPosition = new Cesium.Cartesian2()
-        let gridCoor = new Cesium.Cartesian2 ( girdPosition[0] , girdPosition[1] )
-        let transform = new Cesium.Cartesian2(1,-1)
-        Cesium.Cartesian2.multiplyComponents (gridCoor, transform, modelPosition) 
-        let translation = new Cesium.Cartesian2(-this._halfGridX,this._halfGridY)
-        Cesium.Cartesian2.add (modelPosition, translation, modelPosition)
-        let sigleBoxLength = new Cesium.Cartesian2(dimensions.x,dimensions.y)
-        Cesium.Cartesian2.multiplyComponents (modelPosition, sigleBoxLength, modelPosition)
+    convertToModelPosition(girdPosition,dimensions,offset){
+        Cesium.defaultValue(offset,new Cesium.Cartesian3())
+        let modelPosition = new Cesium.Cartesian3()
+        let gridCoor = new Cesium.Cartesian3 ( girdPosition[0] , girdPosition[1],0 )
+        let transform = new Cesium.Cartesian3(1,-1,1)
+        Cesium.Cartesian3.multiplyComponents (gridCoor, transform, modelPosition) 
+        let translation = new Cesium.Cartesian3(-this._halfGridX,this._halfGridY,0)
+        Cesium.Cartesian3.add (modelPosition, translation, modelPosition)
+        Cesium.Cartesian3.multiplyComponents (modelPosition, dimensions, modelPosition)
+        Cesium.Cartesian3.add(modelPosition,offset,modelPosition)
         return modelPosition
     }
 

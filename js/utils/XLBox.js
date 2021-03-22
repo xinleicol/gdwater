@@ -6,7 +6,7 @@ class XLBox{
     }
 
     computerModelMatrix(centerPosition){
-        this.determineType(centerPosition)
+        this.determineTypeCartesian3(centerPosition)
         this._modelMatrix = Cesium.Transforms.eastNorthUpToFixedFrame(centerPosition)
         return this._modelMatrix
     }
@@ -29,7 +29,7 @@ class XLBox{
     }
 
     computerWorldPosition(modelPosition,modelMatrix){
-        this.determineType(modelPosition)
+        this.determineTypeCartesian3(modelPosition)
         return Cesium.Matrix4.multiplyByPoint(
             modelMatrix, 
             modelPosition, 
@@ -38,7 +38,7 @@ class XLBox{
     }
 
     computerModelPosition(worldPosition,worldToModel){
-        this.determineType(worldPosition)
+        this.determineTypeCartesian3(worldPosition)
         return Cesium.Matrix4.multiplyByPoint(
             worldToModel, 
             worldPosition, 
@@ -67,7 +67,7 @@ class XLBox{
     }
 
     /**判定传进来的变量是cartesian3 */
-    determineType(centerPosition){
+    determineTypeCartesian3(centerPosition){
         if ((!'x' in centerPosition) | (!'y' in centerPosition) | (!'z' in centerPosition)) {
             throw new Error('请传入一个cartesian类型的位置坐标...')
         }

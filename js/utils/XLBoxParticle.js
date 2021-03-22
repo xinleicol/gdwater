@@ -1,14 +1,27 @@
 import XLBox from './XLBox.js'
+import XLParticleSystem from './XLParticleSystem.js'
 
 class XLBoxParticle extends XLBox{
     _centerPosition=null
     _url = 'http://127.0.0.1:5500/image/whatever.jpg'
-    _particleStyle={}
-    _modelMatrix = null
-    _emitterInitialLocation =  new Cesium.Matrix4()
-    _particleSystem = null
-    _update = function () {}
+    _particleStyle={} //粒子样式
+    _modelMatrix = null //模型到世界的旋转矩阵
+    _emitterInitialLocation =  new Cesium.Matrix4() //粒子发射的模型坐标
+    _particleSystem = null //粒子系统
+    _speed = 6000 //粒子速度
+    _update = function (particle,dt) {
+        if (particle.endPosition) { //有终点就会开始运动
+            Cesium.Cartesian3.subtract (particle.endPosition, particle.position, particle.velocity)
+            Cesium.Cartesian3.normalize(particle.velocity,particle.velocity)
+            Cesium.Cartesian3.multiplyByScalar(particle.velocity,6000,particle.velocity) //(优化)
+        }
+    }
 
+    /**
+     * 
+     * @param {模型中心世界坐标} centerPosition 
+     * @param {粒子发射模型偏移坐标} emitterInitialLocation 
+     */
     constructor(centerPosition,emitterInitialLocation){
         super()
         if (emitterInitialLocation) {
@@ -23,32 +36,45 @@ class XLBoxParticle extends XLBox{
         return this._particleSystem
     }
 
+    get particles(){
+        if (this.particleSystem) {
+            return this.particleSystem._Particles
+        }
+    }
+
     /**
-     * 生成粒子对象
+     * 
+     * @returns 生成粒子系统，并返回指定数量存活的粒子数组
      */
     generate(){
         if (this._centerPosition == null | this._modelMatrix == null ) {
             throw new Error('污染源、模型矩阵不能为空...')
         }
-        this._particleSystem = scene.primitives.add(new Cesium.ParticleSystem({
+        let newParticleSystem = new XLParticleSystem({
             ...this._particleStyle,
-            color: Cesium.Color.BLACK , //开始颜色
+            color: Cesium.Color.RED , //开始颜色
             emitter: new Cesium.BoxEmitter(new Cesium.Cartesian3(50000, 50000, 25000)),
             image: XLBoxParticle.getImage(), 
-            particleLife: 10, //粒子生存时间
+            // particleLife:20, //粒子生存时间
             speed: 0, 
             imageSize: new Cesium.Cartesian2(17.0, 17.0), 
-            emissionRate: 2.0, 
+            emissionRate: 20.0, 
             loop:false,
             lifetime: 5, 
+            particleNumber:100,
             //mass:10.0,
             updateCallback: this._update, 
             modelMatrix: this._modelMatrix,
             emitterModelMatrix: this._emitterInitialLocation 
-        }));
-        
+        });
+        this._particleSystem = scene.primitives.add(newParticleSystem)   
     }
 
+    /**
+     * 
+     * @param{粒子发射初始模型位置} emitterInitialLocation
+     * @returns 返回模型矩阵
+     */
     static computerEmitterModelMatrix(emitterInitialLocation){
        return Cesium.Matrix4.fromTranslation(
             emitterInitialLocation,
@@ -73,10 +99,6 @@ class XLBoxParticle extends XLBox{
         return particleCanvas;
     }
 
-    raiseToTop(){
-        scene.primitives.raiseToTop(this._particleSystem)
-    }
-
     /**
      * 更新粒子函数
      * @param {粒子更新函数} fun 
@@ -89,37 +111,22 @@ class XLBoxParticle extends XLBox{
         }
     }
 
+    /**
+     * 
+     * @param {粒子系统} particleSystem 
+     * @returns 指定时间后返回粒子数组，在原生粒子系统中有效（）
+     */
     hasCompleted(particleSystem){
         let massage = new Cesium.Check.typeOf.object('object',particleSystem)
         return new Promise((resolve,rejecet)=>{
             if (massage) {
                 setTimeout(()=>{
-                    console.log('里面...');
-                    resolve(particleSystem._particles)
-                },particleSystem.lifetime*1000)
+                    resolve(particleSystem._Particles)
+                },(particleSystem.lifetime)*1000)
             }else{
                 rejecet('获取粒子数组失败...')
             }
         } )
-        if (massage) { 
-            
-            setTimeout(()=>{
-                console.log('settimeout running..');
-                //console.log(particleSystem._particles);
-                //console.log(particleSystem._particles[1]);
-                 //let particle = particleSystem._particles[1]
-                // console.log(particle);
-                // console.log(particle.life);
-                //particle.life = Number.MAX_VALUE
-                
-                //particle.update(1,function(){console.log(11);})
-                // console.log(particle);
-                // let newVelocity = Cesium.Cartesian3.multiplyByScalar(Cesium.Cartesian3.UNIT_Z,6000, new Cesium.Cartesian3());
-                // console.log(newVelocity);
-                // particle.velocity = Cesium.Cartesian3.clone(newVelocity)
-                // console.log(particle);
-            },particleSystem.lifetime*1000)             
-        }
     }
 
 }
