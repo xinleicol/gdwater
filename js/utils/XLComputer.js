@@ -1,3 +1,4 @@
+
 /**
  * 计算类
  * 
@@ -35,14 +36,16 @@ class XLComputer{
                     'position':[i,j],
                     'cellMass':this._mass[i][j],
                     'elevation':this._heightMatrix[i][j],
-                    'kdiff':0.0,
-                    'boundary':'noBoundary',
-                    'isPolluted':false,
+                    'kdiff':0.0, 
+                    'boundary':'noBoundary', //边界条件
+                    'isPolluted':false, //是否被污染
                     'fatherNode':null, //父节点
                     'childNode':[], //子节点
-                    'particlePool':[], //粒子池(弃用)
-                    'isMassUpdate':false, //弃用
-                    'beforeCellMass':0.0, //弃用
+                    'particlePool':[], //粒子池
+                    'isTrailPloy':false, //当前元胞是否已经有流动线
+                    'worldPosition':undefined, //元胞世界坐标
+                    'modelPosition':undefined, //模型坐标
+                    
                 }               
                 if (i == 0 ) {
                     this.spreadArea[i][j].boundary = 'topBoundary'
@@ -160,11 +163,11 @@ class XLComputer{
                         this.spreadArea[m][n].cellMass += -updateCellMass
                         inclineMass += updateCellMass
                     }
-                    if (! this.spreadArea[m][n].isPolluted) {
+                    if (! this.spreadArea[m][n].isPolluted) { //当前元胞还未被污染，这是新的污染元胞
                         this.spreadArea[m][n].isPolluted = true //表示当前元胞已被污染
                         this.isPollutedArea.push(this.spreadArea[m][n]) //表示所有污染元胞的集合
                         this.spreadArea[m][n].fatherNode = this.spreadArea[i][j].position //为该节点添加父节点
-                        this.spreadArea[i][j].childNode.push(this.spreadArea[i][j].position) //为该节点添加父节点
+                        this.spreadArea[i][j].childNode.push(this.spreadArea[i][j].position) //为该节点添加子节点
                     }
                     this.nextPollutedArea.push(this.spreadArea[m][n])
                 }
@@ -227,8 +230,8 @@ class XLComputer{
         if (currentSpreadArea.boundary == 'noBoundary') {  //当前元胞无边界  
             let position = currentSpreadArea.position
             this._computerNewMass(position[0],position[1])
-            return this.nextPollutedArea
         }
+        return this.nextPollutedArea
     }
 
     /**
@@ -255,26 +258,6 @@ class XLComputer{
         if(Cesium.defined(grid1.elevation) & Cesium.defined(grid2.elevation)){
             return grid1.elevation - grid2.elevation < 0 ? true:false
         }
-    }
-
-    /**
-     * 将数组索引转化为元胞所处的模型坐标
-     * @param {网格坐标} girdPosition 
-     * @param {元胞的长宽高} dimensions 
-     * @param {元胞中点相对模型的偏移量（元胞中心的模型坐标）} offset 
-     * @returns 元胞中心在模型下的坐标 
-     */
-    convertToModelPosition(girdPosition,dimensions,offset){
-        Cesium.defaultValue(offset,new Cesium.Cartesian3())
-        let modelPosition = new Cesium.Cartesian3()
-        let gridCoor = new Cesium.Cartesian3 ( girdPosition[0] , girdPosition[1],0 )
-        let transform = new Cesium.Cartesian3(1,-1,1)
-        Cesium.Cartesian3.multiplyComponents (gridCoor, transform, modelPosition) 
-        let translation = new Cesium.Cartesian3(-this._halfGridX,this._halfGridY,0)
-        Cesium.Cartesian3.add (modelPosition, translation, modelPosition)
-        Cesium.Cartesian3.multiplyComponents (modelPosition, dimensions, modelPosition)
-        Cesium.Cartesian3.add(modelPosition,offset,modelPosition)
-        return modelPosition
     }
 
 }

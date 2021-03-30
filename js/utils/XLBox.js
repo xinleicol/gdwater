@@ -72,6 +72,19 @@ class XLBox{
             throw new Error('请传入一个cartesian类型的位置坐标...')
         }
     }
+
+    /**
+     * 将笛卡尔坐标转换为经纬度坐标
+     * @param {笛卡尔坐标} cartesian3 
+     * @returns 
+     */
+    cartesian3ToDegrees(cartesian3){
+        this.determineTypeCartesian3(cartesian3)
+        let postionCarto = Cesium.Cartographic.fromCartesian (cartesian3)
+        let longitude = Cesium.Math.toDegrees(postionCarto.longitude )
+        let latitude = Cesium.Math.toDegrees(postionCarto.latitude )
+        return new Cesium.Cartesian3(longitude,latitude)
+    }
 }
 
 export default XLBox

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>污染物潜水面扩散仿真</title>
+    <script src="../../CesiumUnminified/Cesium.js"></script>
+    <script src="../../js/source/Sandcastle-header.js"></script>
+    <script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.6.0/jquery.js"></script>
+    <link href="../../Cesium/Widgets/widgets.css" rel="stylesheet">
+    <style>
+        @import url(../../Cesium/css/bucket.css);
+        #toolbar {
+            background: rgba(42, 42, 42, 0.8);
+            padding: 4px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div id="cesiumContainer" class="fullSize"></div>
+    <div id="toolbar">
+        <table>
+            <tr>
+                <td>
+                    <button id="init" class="cesium-button">初始化</button>
+                </td>
+                <td>
+                    <button id="main" class="cesium-button">模拟</button>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <input type="checkbox" id="massLabel">
+                </td>
+                <td>
+                   <p>污染物质量</p>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <input type="checkbox" id="waterLineCheck">
+                </td>
+                <td>
+                   <p>水流线</p>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <script src="../../js/gdwaterLevel/globalName.js"></script>
+    <script type="module" src="../../js/gdwaterLevel/gdwaterLevel.js"></script>
+</body>
+</html>
