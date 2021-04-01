@@ -25,7 +25,13 @@ class XLLabel {
         this.labelCollection.removeAll ()
     }
 
-    addlabel(spreadArea,style) {
+    /**
+     * 
+     * @param {污染扩散区域} spreadArea 
+     * @param {标签文本} value 
+     * @param {样式} style 
+     */
+    addlabel(spreadArea,value,style) {
         XLType.determineDoubleArray(spreadArea)
         if (this.labelCollection) {
             this.removeAll()
@@ -35,10 +41,18 @@ class XLLabel {
         }
         spreadArea.forEach(element1 => {
             element1.forEach(element2 => {
-                this.gennerate(element2.worldPosition,element2.cellMass)
+                this.gennerate(element2.worldPosition,this.getValue(element2,value))
             });
         });
     }
+
+    getValue(cell,value){
+       XLType.determineObject(cell)
+       if (value in cell) {
+           return eval('cell.'+value)
+       }
+    }
+
 }
 
 export default XLLabel

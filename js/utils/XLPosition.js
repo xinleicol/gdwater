@@ -42,7 +42,7 @@ class XLPosition extends XLBox{
         }
         Cesium.defaultValue(this._offset,new Cesium.Cartesian3())
         let modelPosition = new Cesium.Cartesian3()
-        let gridCoor = new Cesium.Cartesian3 ( girdPosition[0] , girdPosition[1],0 )
+        let gridCoor = new Cesium.Cartesian3 ( girdPosition[1] , girdPosition[0],0 ) //y x坐标不要搞混
         let transform = new Cesium.Cartesian3(1,-1,1)
         Cesium.Cartesian3.multiplyComponents (gridCoor, transform, modelPosition) 
         let translation = new Cesium.Cartesian3(-this._halfGridX,this._halfGridY,0)

@@ -168,7 +168,7 @@ var MeasureObject = {
         const d1 = distances[0];
         const d2 = distances[1];
         const d3 = distances[2];
-        let p = d1 + d2 + d3; //周长
+        let p = (d1 + d2 + d3)/2; //周长
         let s = Math.sqrt(p * (p - d1) * (p - d2) * (p - d3));
         return s;
     },

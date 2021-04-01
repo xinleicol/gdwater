@@ -5,8 +5,9 @@ import InitCell from './InitCell.js'
 import XLBoxGeometry from '../utils/XLBoxGeometry.js'
 import XLLabel from '../utils/XLLabel.js'
 import XLPosition from '../utils/XLPosition.js'
+import xlType from '../utils/XLType.js'
 
-var waterLevel =[
+var waterLevel = [
     [26.9706, 26.8452, 26.7198, 26.5944, 26.469, 26.3437, 26.2183, 26.0929, 25.9675],
     [27.1173, 26.9919, 26.8666, 26.7412, 26.6158, 26.4904, 26.365, 26.2396, 26.1142],
     [27.2641, 27.1387, 27.0133, 26.8879, 26.7625, 26.6371, 26.5117, 26.3863, 26.261],
@@ -29,67 +30,164 @@ var initcell = undefined //元胞网格对象
 var xlPos = undefined //计算元胞位置的对象
 var xlLabel = undefined //标签对象
 var xlGeo = undefined //盒子流动线对象
+
 var time = 0 //计数器
 var compeleted = false //初始化指示
-
-var labelStyle = {
-    font:'sans-serif 10px',
-    fillColor:Cesium.Color.MAGENTA,
-    pixelOffset: new Cesium.Cartesian2(5, 5),
-    scaleByDistance: new Cesium.NearFarScalar(1.5e2, 1.5, 1.5e7, 0.1),
-}
+var mechanicalDiffusionFlag = false //机械弥散指示
+var molecularDiffusionFlag = false
 
 // 初始化
 function init() {
-    initcell = new InitCell(waterLevel,waterVeloty,rows,cloumns,dimensions) //初始化元胞网格
-    xlPos = new XLPosition(centerPosition,dimensions,centerOffset,rows,cloumns)
+
+    if (compeleted) {
+        removeLabels()
+        removeWaterLine()
+        removeBoxs()
+
+        time = 0
+        compeleted = false
+        mechanicalDiffusionFlag = false
+        molecularDiffusionFlag = false
+
+        $('#diffutionNumber').text(time);
+    }
+
+    initcell = new InitCell(waterLevel, waterVeloty, rows, cloumns, dimensions) //初始化元胞网格
+    xlPos = new XLPosition(centerPosition, dimensions, centerOffset, rows, cloumns)
     xlPos.giveGridWorldAndModelPosition(initcell.spreadArea)
-    xlGeo = new XLBoxGeometry(centerPosition, dimensions) 
+    xlGeo = new XLBoxGeometry(centerPosition, dimensions)
     xlGeo.setView([-75.59777, 40.03883])
-    xlGeo.initBoxPosition(centerOffset,rows,cloumns)
-    xlGeo.generate() 
+    xlGeo.initBoxPosition(centerOffset, rows, cloumns)
     xlLabel = new XLLabel()
     compeleted = true
 }
 
-
-// 程序入口 
+// 机械扩散加分子扩散
 function main() {
-    if (!compeleted) {
-        alert('请先进行初始化...')
-        return
-    }
+    if (!xlType.xlAlert(compeleted, '请先初始化...')) return
+    if (!xlType.xlAlert(!molecularDiffusionFlag, !mechanicalDiffusionFlag, '正在进行分子扩散或者机械弥散模拟...')) return
+    doSamething()
 
-    let mass = inputPollutants(time)
-    initcell.setPollutantMass(5,5,mass)
+    initcell.updateCellMassForMoleAndMech()
+    doSamethingAfther()
+}
+
+
+// 机械弥散 
+function mechanicalDiffusion() {
+    if (!xlType.xlAlert(compeleted, '请先初始化...')) return
+    if (!xlType.xlAlert(!molecularDiffusionFlag, '正在进行分子扩散模拟...')) return
+    doSamething()
     initcell.updateCellMass() // 更新质量，扩散模拟
+    if (!mechanicalDiffusionFlag) {
+        mechanicalDiffusionFlag = true
+    }
+    doSamethingAfther()
 
-    if ( $('#massLabel').prop('checked')) {
-        xlLabel.addlabel(initcell.spreadArea,labelStyle)
+}
+
+// 分子扩散
+function molecularDiffusion() {
+    if (!xlType.xlAlert(compeleted, '请先初始化...')) return
+    if (!xlType.xlAlert(!mechanicalDiffusionFlag, '正在进行机械弥散模拟...')) return
+    doSamething()
+    initcell.updateCellMassForMole()
+    if (!molecularDiffusionFlag) {
+        molecularDiffusionFlag = true
+    }
+    doSamethingAfther()
+}
+
+// 相同代码提取
+function doSamething() {
+    let mass = inputPollutants(time)
+    initcell.setPollutantMass(4, 4, mass)
+}
+
+function doSamethingAfther() {
+    if ($('#massLabel').prop('checked')) {
+        removeLabels()
+        generateLabels()
     }
 
+    if (($('#selectBoxs').prop('checked') == true) & time == 0) {
+        let selectVal = $('#boxs').val()
+        if (selectVal == 'outlineBox') {
+            generateOutlineBoxs()
+        } else if (selectVal == 'filledBox') {
+            generateFilledBoxs()
+        }
+    }
+
+    $('#diffutionNumber').text(time);
     time++
 }
 
-function generateLabels(){
-    if (!compeleted) {
-        alert('请先进行初始化...')
-        return
+function generateOutlineBoxs() {
+    if (!xlType.xlAlert(compeleted, '请先初始化...')) return
+
+    xlGeo.attributeStyle = {
+        color: Cesium.ColorGeometryInstanceAttribute.fromColor(Cesium.Color.DEEPPINK)
     }
-    xlLabel.addlabel(initcell.spreadArea,labelStyle)
+    xlGeo.appearance = new Cesium.PerInstanceColorAppearance({
+        flat: true
+    })
+    xlGeo.generate()
+}
+
+function generateFilledBoxs() {
+    if (!xlType.xlAlert(compeleted, '请先初始化...')) return
+
+    let geometry = Cesium.BoxGeometry.fromDimensions({
+        vertexFormat: Cesium.VertexFormat.POSITION_AND_NORMAL,
+        dimensions: dimensions
+    })
+    xlGeo.attributeStyle = {
+        color: Cesium.ColorGeometryInstanceAttribute.fromColor(Cesium.Color.MINTCREAM)
+    }
+    xlGeo.appearance = new Cesium.PerInstanceColorAppearance()
+    xlGeo.generate(geometry)
+}
+
+function removeBoxs() {
+    xlGeo.removeAllBoxs()
 
 }
 
-function removeLabels(params) {
+function generateLabels() {
+
+    if (!xlType.xlAlert(compeleted, '请先初始化...')) return
+    let labelStyle = {
+        font: 'sans-serif 10px',
+        fillColor: Cesium.Color.MAGENTA,
+        pixelOffset: new Cesium.Cartesian2(5, 5),
+        scaleByDistance: new Cesium.NearFarScalar(1.5e2, 1.5, 1.5e7, 0.1),
+    }
+    xlLabel.addlabel(initcell.spreadArea, 'cellMass', labelStyle)
+
+}
+
+
+function removeLabels() {
     xlLabel.removeAll()
+}
+
+function generateWaterLabel() {
+    if (!xlType.xlAlert(compeleted, '请先初始化...')) return
+
+    var labelStyle = {
+        font: 'sans-serif 10px',
+        fillColor: Cesium.Color.BLUEVIOLET,
+        pixelOffset: new Cesium.Cartesian2(7, 7),
+        scaleByDistance: new Cesium.NearFarScalar(1.5e2, 1.5, 1.5e8, 0.1),
+    }
+    xlLabel.addlabel(initcell.spreadArea, 'waterLevel', labelStyle)
 }
 
 // 生成水流线
 function generateWaterLine() {
-    if (!compeleted) {
-        alert('请先初始化...')
-        return
-    }
+    if (!xlType.xlAlert(compeleted, '请先初始化...')) return
+
     let spreadArea = initcell.spreadArea
     spreadArea.forEach(element1 => {
         element1.forEach(element2 => {
@@ -113,28 +211,97 @@ function removeWaterLine() {
  * @returns 
  */
 function inputPollutants(time) {
-    return -0.6* Math.pow((time - 5),2) +15
+    return -0.6 * Math.pow((time - 5), 2) + 15
 }
 
 
-$(document).ready(()=>{
 
-    document.getElementById('main').addEventListener("click", main)
+
+
+$(document).ready(() => {
+
+    document.getElementById('mechanicalDiffusion').addEventListener("click", mechanicalDiffusion)
     document.getElementById('init').addEventListener("click", init)
-    
-    $('#massLabel').click(function(){
-        if ($(this).prop("checked")==true) {
+
+    $('#main').click(main)
+
+    $('#molecularDiffusion').click(molecularDiffusion)
+
+    $('#massLabel').click(function () {
+        if (!compeleted) {
+            alert('请先初始化...')
+            $(this).prop('checked', !$(this).prop('checked'))
+            return
+        }
+
+        if ($(this).prop("checked") == true) {
             generateLabels()
-        }else{
+        } else {
             removeLabels()
         }
     })
 
-    $('#waterLineCheck').click(function(){
-        if ($(this).prop("checked")==true) {
+    $('#waterLabel').click(function () {
+        if (!compeleted) {
+            alert('请先初始化...')
+            $(this).prop('checked', !$(this).prop('checked'))
+            return
+        }
+
+        if ($(this).prop("checked") == true) {
+            generateWaterLabel()
+        } else {
+            removeLabels()
+        }
+    })
+
+
+    $('#waterLineCheck').click(function () {
+        if (!compeleted) {
+            alert('请先初始化...')
+            $(this).prop('checked', !$(this).prop('checked'))
+            return
+        }
+
+        if ($(this).prop("checked") == true) {
             generateWaterLine()
-        }else{
+        } else {
             removeWaterLine()
         }
     })
+
+    $('#selectBoxs').click(function () {
+        if (!compeleted) {
+            alert('请先初始化...')
+            $(this).prop('checked', !$(this).prop('checked'))
+            return
+        }
+
+        if ($(this).prop('checked') == true) {
+
+            let selectVal = $('#boxs').val()
+            if (selectVal == 'outlineBox') {
+                generateOutlineBoxs()
+            } else if (selectVal == 'filledBox') {
+                generateFilledBoxs()
+            }
+        } else {
+            removeBoxs()
+        }
+    });
+
+    if ($('#selectBoxs').prop('checked') == true) {
+        $('#boxs').change(function () {
+            removeBoxs()
+            let selectVal = $(this).val()
+            if (selectVal == 'outlineBox') {
+                generateOutlineBoxs()
+            } else if (selectVal == 'filledBox') {
+                generateFilledBoxs()
+            }
+        })
+    } else {
+        removeBoxs()
+    }
+
 })

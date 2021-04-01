@@ -9,10 +9,19 @@ class XLBoxGeometry extends XLBox {
     _centerOffset = null //中心点偏移量
     _dimensions = null
     _offsets = []
-    _geometryInstances = []
+
     _TrailPloyLineColor = undefined //箭头颜色
     trailPloys = [] //存放已经生成的流动线实体
     lightingTrailPloys = [] //发光流动线
+    geometry = undefined //盒子样式
+    _boxPrimitives = new Cesium.PrimitiveCollection () //盒子的primitive实体集合
+    _boxPrimitive = undefined //一个primitive
+    attributeStyle = {
+        color: Cesium.ColorGeometryInstanceAttribute.fromColor(Cesium.Color.AQUA) 
+    }
+    appearance = new Cesium.PerInstanceColorAppearance({
+        flat: true //使用BoxOutlineGeometry时，要将光照关闭
+    })
     constructor(centerPoint, dimensions, offsets) {
         super()
         this._centerPoint = centerPoint
@@ -58,38 +67,48 @@ class XLBoxGeometry extends XLBox {
     /**
      * 生成盒子
      */
-    generate() {
+    generate(geometry) {
         if (this._offsets.length == 0) {
             throw new Error('请传入一个非空的偏移坐标...')
         }
-        let geometry = Cesium.BoxOutlineGeometry.fromDimensions({ //BoxGeometry
-            //vertexFormat: Cesium.VertexFormat.POSITION_AND_NORMAL,
+
+        let geometryDefault = Cesium.BoxOutlineGeometry.fromDimensions({ 
             dimensions: this._dimensions
-        });
+        })
+        this.geometry = Cesium.defaultValue(geometry,geometryDefault)
+
         let i = 0
         let modelMatrix = this.computerModelMatrix(this._centerPoint)
+        let geometryInstances = []
         for (const offset of this._offsets) {
             let instance = new Cesium.GeometryInstance({
-                geometry: geometry,
+                geometry: this.geometry,
                 modelMatrix: Cesium.Matrix4.multiplyByTranslation(
                     modelMatrix,
                     offset,
                     new Cesium.Matrix4()),
-                attributes: {
-                    color: Cesium.ColorGeometryInstanceAttribute.fromColor(Cesium.Color.AQUA) //Cesium.Color.AQUA)
-                },
+                attributes: this.attributeStyle,
                 id: i
             });
-            this._geometryInstances.push(instance)
+            geometryInstances.push(instance)
             i++
         }
 
-        scene.primitives.add(new Cesium.Primitive({
-            geometryInstances: this._geometryInstances,
-            appearance: new Cesium.PerInstanceColorAppearance({
-                flat: true //使用BoxOutlineGeometry时，要将光照关闭
-            })
-        }));
+        // 后面有时间再优化
+        this._boxPrimitive = new Cesium.Primitive({
+            geometryInstances: geometryInstances,
+            appearance: this.appearance
+        })
+        this._boxPrimitives.add(this._boxPrimitive)
+        scene.primitives.add(this._boxPrimitives);
+    }
+
+    removeAllBoxs(){  
+        if (this._boxPrimitive) {
+            this._boxPrimitives.remove(this._boxPrimitive)
+            this._boxPrimitive = undefined
+        } 
+        
     }
 
     /**
@@ -122,7 +141,7 @@ class XLBoxGeometry extends XLBox {
     /**
      * 移除所有流动线
      */
-    removeAllLightingTrailPolyline() {
+     removeAllTrailPolyline() {
         this.trailPloys.forEach((element) => {
             viewer.entities.remove(element)
         })
@@ -139,7 +158,7 @@ class XLBoxGeometry extends XLBox {
             name: 'PolylineTrail',
             polyline: {
                 positions: [startPosition, endPosition],
-                width: 10,
+                width: 15,
                 material: new PolylineLightingTrailMaterialProperty({
                     color: color,
                     speed: 5.0,
@@ -154,7 +173,7 @@ class XLBoxGeometry extends XLBox {
     /**
      * 移除所有发光流动线
      */
-    removeAllTrailPolyline() {
+     removeAllLightingTrailPolyline() {
         this.lightingTrailPloys.forEach((element) => {
             viewer.entities.remove(element)
         })

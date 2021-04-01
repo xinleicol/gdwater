@@ -21,6 +21,11 @@ var hhuDem = new Cesium.CesiumTerrainProvider({
     url: "http://127.0.0.1:5500/resource/hhu_dem4"
 });
 
+//河海地形
+var hhuDem_fill = new Cesium.CesiumTerrainProvider({
+    url: "http://127.0.0.1:5500/resource/finallyout3857"
+});
+
 var viewer = new Cesium.Viewer('cesiumContainer', {
     imageryProvider: false,
     shouldAnimate: true,
@@ -36,7 +41,8 @@ var scene = viewer.scene;
 var globe = scene.globe;
 var camera = viewer.camera;
 var handler = new Cesium.ScreenSpaceEventHandler(viewer.canvas); //开启事件
-viewer.terrainProvider = hhuDem; //加载地形
+ //viewer.terrainProvider = hhuDem; //加载地形
+viewer.terrainProvider = hhuDem_fill; //加载地形
 
 
 //影像矩形

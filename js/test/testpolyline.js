@@ -20,4 +20,5 @@ let offsets = [
 let XLGeo = new XLBoxGeometry(centerPoint,dimensions,offsets)
 let startPosition = XLGeo.computerWorldPositionFromCenter(offsets[0],centerPoint)
 let endPosition = XLGeo.computerWorldPositionFromCenter(offsets[1],centerPoint)
-XLGeo.generatePloyLine(startPosition,endPosition)
+XLGeo.generate()
+XLGeo.generateTrailPloyLine(startPosition,endPosition)
