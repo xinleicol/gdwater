@@ -46,6 +46,23 @@ class XLLabel {
         });
     }
 
+    addlabel3D(spreadArea,value,style) {
+        XLType.determineDoubleArray(spreadArea)
+        if (this.labelCollection) {
+            this.removeAll()
+        }
+        if (style) {
+            this.styles = style
+        }
+        spreadArea.forEach(element1 => {
+            element1.forEach(element2 => {
+                element2.forEach((element3)=>{
+                    this.gennerate(element3.worldPosition,this.getValue(element3,value))
+                })
+            });
+        });
+    }
+
     getValue(cell,value){
        XLType.determineObject(cell)
        if (value in cell) {

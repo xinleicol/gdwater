@@ -27,15 +27,18 @@
 
 
 
-var a = [1,2,3]
-function test(){
-    let b =a
-    b.forEach((element) => {
-        if (element > 2) {
-            b.push(3)
-        }
-    }) 
-    console.log(b);
-}
+// var a = [1,2,3]
+// function test(){
+//     let b =a
+//     b.forEach((element) => {
+//         if (element > 2) {
+//             b.push(3)
+//         }
+//     }) 
+//     console.log(b);
+// }
 
-test()
+// test()
+
+
+  

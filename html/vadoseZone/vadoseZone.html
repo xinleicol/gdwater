@@ -5,14 +5,17 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>污染物潜水面扩散仿真</title>
+    <title>污染物包气带扩散仿真</title>
     <script src="../../CesiumUnminified/Cesium.js"></script>
     <script src="../../js/source/Sandcastle-header.js"></script>
     <script src="../../js/source/jquery-3.6.0.min.js"></script>
+    <script src="../../js/source/jquery-ui.min.js"></script>
+    <script src="../../js/source/echarts.min.js"></script>
+    <script src="../../js/source/echarts-gl.min.js"></script>
     <link href="../../Cesium/Widgets/widgets.css" rel="stylesheet">
     <style>
         @import url(../../Cesium/css/bucket.css);
-        @import url(../../css/myCss.css);
+        @import url(../../css/vadoseZone.css);
     </style>
 </head>
 
@@ -28,36 +31,20 @@
           
             <tr>
                 <td>
-                    <button id="mechanicalDiffusion" class="cesium-button">机械弥散</button>
+                    <button id="convectionSimulate" class="cesium-button">对流作用</button>
                 </td>
-                <td>
-                    <button id="molecularDiffusion" class="cesium-button">分子扩散</button>
-                </td>
+               
             </tr>
-            <tr>
-                <td>
-                    <button id="main" class="cesium-button">机分共同作用</button>
-                </td>
-            </tr>
+           
             <tr>
                 <td>
                    <p>扩散次数</p>
                 </td>
                 <td>
-                    <div id="diffutionNumber">0</div>
+                    <p id="diffutionNumber">0</p>
                 </td>
             </tr>
-            <tr>
-                <td>
-                    <input type="checkbox" id="selectBoxs" checked>
-                </td>
-                <td>
-                    <select id="boxs">
-                        <option value="outlineBox">无边框元胞</option>
-                        <option value="filledBox">有边框元胞</option>
-                    </select>
-                </td>
-            </tr>
+            
             <tr>
                 <td>
                     <input type="checkbox" id="massLabel">
@@ -68,25 +55,54 @@
             </tr>
             <tr>
                 <td>
-                    <input type="checkbox" id="waterLabel">
+                    <input type="checkbox" id="selectBoxs">
                 </td>
                 <td>
-                    <p>水位值</p>
+                    <p>元胞</p>
                 </td>
             </tr>
             <tr>
                 <td>
-                    <input type="checkbox" id="waterLineCheck">
+                    <input type="checkbox" id="selectOutline">
                 </td>
                 <td>
-                    <p>水流线</p>
+                    <p>元胞边框</p>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <p>元胞透明度</p>
+                </td>
+                <td>
+                    <input type="range" min="0" max="1" step="0.1" value="0.1" id="cellAlpha">
+                </td>
+                <td>
+                    <input type="text" id="cellAlphaText" value="0.1">
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <input type="checkbox" id="showEchart">
+                </td>
+                <td>
+                    <p>三维图标展示</p>
+                </td>
+            </tr>    
+            <tr>
+                <td>
+                    <input type="checkbox" id="isDraggable">
+                </td>
+                <td>
+                    <p>拖动图表</p>
                 </td>
             </tr>
         </table>
     </div>
 
-    <script src="../../js/gdwaterLevel/globalName.js"></script>
-    <script type="module" src="../../js/gdwaterLevel/gdwaterLevel.js"></script>
+    <div id="echart" hidden></div>
+
+    <script src="../../js/vadoseZone/globalName.js"></script>
+    <script type="module" src="../../js/vadoseZone/vadoseZone.js"></script>
 </body>
 
 </html>

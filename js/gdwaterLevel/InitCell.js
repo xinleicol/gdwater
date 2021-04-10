@@ -167,8 +167,8 @@ class InitCell {
                     if (cellSlopScrach > cellSlop) {
                         cellSlop = cellSlopScrach
                         waterFlow = [m, n]
-                        spreadArea.cellDistance = cellDistance
                     }
+                    spreadArea.cellDistance = cellDistance
                 }
             }
         }

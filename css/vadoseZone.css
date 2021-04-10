@@ -25,3 +25,17 @@
 #toolbar p{
     padding-left: 5px;
 }
+
+#cellAlphaText{
+    width: 50px;
+}
+
+#echart{
+    
+    background: rgba(42, 42, 42, 0.8);
+    width: 600px;
+    height: 400px;
+    position:absolute;
+    bottom: 10%;
+}
+

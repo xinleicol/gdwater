@@ -20,9 +20,17 @@ class XLType{
         this.determineArray(arrs[0])
     }
 
+    //判断对象
     static determineObject(obj){
         if(! obj instanceof Object){
             throw new Error('请传入一个对象..')
+        }
+    }
+
+    //判断cartesian3
+    static determineCartesian3(obj){
+        if (! ('x'in obj & 'y' in obj & 'z' in obj)) {
+            throw new Error('请传入一个cartesian3对象....')
         }
     }
 
