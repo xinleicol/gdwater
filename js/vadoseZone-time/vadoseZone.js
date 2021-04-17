@@ -3,6 +3,7 @@
  */
 import InitCell from './InitCell.js'
 import XLBoxGeometry from '../utils/XLBoxGeometry.js'
+import XLLabel from '../utils/XLLabel.js'
 import XLPosition from '../utils/XLPosition.js'
 import xlType from '../utils/XLType.js'
 import XLEchart from '../utils/XLEchart.js'
@@ -30,21 +31,23 @@ var centerOffset = new Cesium.Cartesian3(0.0, 0.0, 5.0)
 
 var initcell = undefined //元胞网格对象
 var xlPos = undefined //计算元胞位置的对象
+var xlLabel = undefined //标签对象
 var xlGeo = undefined //盒子流动线对象
 var xlEchart = undefined //echart图表对象
 
 var time = 0 //计数器
 var compeleted = false //初始化指示
 var startColor = new Cesium.Color(1, 0, 0, 1)
-var endColor = new Cesium.Color(1, 1, 0, 0)
+var endColor = new Cesium.Color(1, 1, 0, 0.1)
 var colorDiff = Cesium.Color.subtract(startColor, endColor, new Cesium.Color())
-
+var maxDistance = null //污染源距离边界的最大长度平方，用来控制颜色渐变 
+var lastTime = 0 //上一次的时间
+var allTime = 0 //扩散总时间
 
 // 初始化
 function init() {
 
     if (compeleted) {
-        removeLabels()
         xlGeo.removeAllBoxsByEntities()
 
         time = 0
@@ -58,6 +61,7 @@ function init() {
     xlGeo = new XLBoxGeometry(centerPosition, dimensions)
     xlGeo.setView([-75.59777, 40.03883])
     xlGeo.initBoxPosition3D(centerOffset, rows, cloumns, heights)
+    xlLabel = new XLLabel()
     xlEchart = new XLEchart(document.getElementById('echart'), cloumns, rows, heights)
 
     compeleted = true
@@ -66,75 +70,94 @@ function init() {
 // 对流作用
 function convectionSimulate() {
     if (!xlType.xlAlert(compeleted, '请先初始化...')) return
-    doSamething()
-
-    if (time > 0) { //第一次点击只输入污染物质量
-        initcell.updateCellMass() //质量更新
+    let currentTime = viewer.clockViewModel.currentTime
+    if (lastTime == 0) {
+        lastTime = currentTime
+        prepareStart()    
     }
+    let timeStep = Cesium.JulianDate.secondsDifference(currentTime, lastTime) //秒 
+    allTime += timeStep
 
-    //颜色差值更新
-    let currentColor = Cesium.Color.subtract(startColor, Cesium.Color.multiplyByScalar(colorDiff, time / (time + 1), new Cesium.Color()), new Cesium.Color()) //颜色差值
-    let length = initcell.nextPollutedArea.length
-    for (let i = 0; i < length; i++) {
-        let onePollutedCell = initcell.nextPollutedArea.pop()
-        xlGeo.getAndSetBoxEntites(onePollutedCell.cellPosition, currentColor) //注意网格坐标的i是坐标系中的y   
+    if (timeStep > 0) {
+       
+        initcell.updateCellMass(timeStep) //质量更新 
+
+        //颜色差值更新
+        let length = initcell.nextPollutedArea.length
+        for (let i = 0; i < length; i++) {
+            let onePollutedCell = initcell.nextPollutedArea.pop()
+            let position = onePollutedCell.position
+            let currentDistance = Math.sqrt(Math.pow(position[0] - 4, 2) + Math.pow(position[1] - 4, 2) + Math.pow(position[2] - 4, 2), 2)
+            let currentColor = Cesium.Color.subtract(startColor, Cesium.Color.multiplyByScalar(colorDiff, currentDistance / maxDistance, new Cesium.Color()), new Cesium.Color()) //颜色差值
+            xlGeo.getAndSetBoxEntites(onePollutedCell.cellPosition, currentColor) //注意网格坐标的i是坐标系中的y   
+            
+        }
+
+        prepareOver()
+        lastTime = currentTime
     }
-
-    doSamethingAfther()
+    window.requestAnimationFrame(convectionSimulate)
 }
 
 //机械弥散
 function mechanicalDispersion() {
     if (!xlType.xlAlert(compeleted, '请先初始化...')) return
-    doSamething()
-
-    if (time > 0) { //第一次点击只输入污染物质量
-        initcell.mechanicalDispersion() //质量更新
+    let currentTime = viewer.clockViewModel.currentTime
+    if (lastTime == 0) {
+        lastTime = currentTime
+        prepareStart()    
     }
+    let timeStep = Cesium.JulianDate.secondsDifference(currentTime, lastTime) //秒 
+    allTime += timeStep
 
-    //颜色差值更新
-    let currentColor = Cesium.Color.subtract(startColor, Cesium.Color.multiplyByScalar(colorDiff, time / (time + 1), new Cesium.Color()), new Cesium.Color()) //颜色差值
-    let length = initcell.nextPollutedArea.length
-    for (let i = 0; i < length; i++) {
-        let onePollutedCell = initcell.nextPollutedArea.pop()
-        xlGeo.getAndSetBoxEntites(onePollutedCell.cellPosition, currentColor) //注意网格坐标的i是坐标系中的y   
+    if (timeStep > 0) {
+       
+        initcell.mechanicalDispersion(timeStep) //质量更新 
+
+        //颜色差值更新
+        let length = initcell.nextPollutedArea.length
+        for (let i = 0; i < length; i++) {
+            let onePollutedCell = initcell.nextPollutedArea.pop()
+            let position = onePollutedCell.position
+            let currentDistance = Math.sqrt(Math.pow(position[0] - 4, 2) + Math.pow(position[1] - 4, 2) + Math.pow(position[2] - 4, 2), 2)
+            let currentColor = Cesium.Color.subtract(startColor, Cesium.Color.multiplyByScalar(colorDiff, currentDistance / maxDistance, new Cesium.Color()), new Cesium.Color()) //颜色差值
+            xlGeo.getAndSetBoxEntites(onePollutedCell.cellPosition, currentColor) //注意网格坐标的i是坐标系中的y   
+            
+        }
+
+        prepareOver()
+        lastTime = currentTime
     }
-
-    doSamethingAfther()
+    window.requestAnimationFrame(mechanicalDispersion)
 
 }
 
 
 // 相同代码提取
-function doSamething() {
-    let mass = inputPollutants(time)
-    if (time == 0) { //test
-        initcell.setPollutantMass(4, 4, 4, 100)
-        xlGeo.getAndSetBoxEntites(new Cesium.Cartesian3(0, 0, 5), startColor)
-    }
+function prepareStart() {
+    initcell.setPollutantMass(4, 4, 4, 100)
+    generateBoxs()
+    $('#selectBoxs').prop('checked', true);    
+    xlGeo.getAndSetBoxEntites(new Cesium.Cartesian3(0, 0, 5), startColor)
+    maxDistance = Math.sqrt(Math.pow(4, 2) + Math.pow(4, 2) + Math.pow(4, 2), 2)
+    
 }
-function doSamethingAfther() {
-
-    if (($('#selectBoxs').prop('checked') == true) & time == 0) {
-        generateBoxs()
-    }
-
-    //更新散点图
+function prepareOver() {
+    $('#diffutionNumber').text(allTime);
     if ($('#showEchart').prop('checked')) {
         updateScatter3D()
     }
 
-    $('#diffutionNumber').text(time);
-    time++
 }
 
 //更新3D散点图
 function updateScatter3D() {
     xlEchart.removeData()
-    if (!xlType.xlAlert(compeleted, '请先初始化...')) return
     initcell.isPollutedArea.forEach(element => {
-        let echartPosition = xlPos.gridToEchartPosition(element.position)
-        xlEchart.setDataAndUpdate([...echartPosition, element.cellMass,element.cellOncentration])
+        if (!element.echartPosition) {
+            element.echartPosition = xlPos.gridToEchartPosition(element.position)
+        }
+        xlEchart.setDataAndUpdate([...element.echartPosition, element.cellMass, element.cellOncentration])
     })
 }
 
@@ -174,23 +197,30 @@ $(document).ready(() => {
     $('#checkPanel').click(function () {
 
         if ($(this).prop("checked") == true) {
-           $('#parametersPanel').show();
-           $('#paramDrag').prop('checked',true)
+            $('#parametersPanel').show();
+            $('#paramDrag').prop('checked', true)
 
             //拖动
             $('#parametersPanel').draggable({
                 disabled: false
-            })  
+            })
+
+            // 从元胞里面拿值
+            $.each($('#paramFrom input'), function (i, element) {
+                let name = $(element).attr('name')
+                if (initcell) {
+                    if (initcell[name]) {
+                        $(element).val(initcell[name]);
+                    } else {
+                        console.log('元胞对象不存在' + name + '此参数名...');
+                    }
+                }
+            });
         } else {
             $('#parametersPanel').hide();
         }
 
-        $.each($('#paramFrom input'), function (i, element) { 
-            let name = $(element).attr('name')
-            if (initcell) {
-                $(element).attr(name, initcell[name]);
-            }
-        });
+
     })
 
 
@@ -237,6 +267,7 @@ $(document).ready(() => {
             $('#echart').show()
             $("#echart").draggable();
             $('#isDraggable').attr('checked', true);
+            updateScatter3D()
         } else {
             $('#echart').hide()
         }
@@ -257,15 +288,19 @@ $(document).ready(() => {
         }
     });
 
-    $('#paramFrom').submit(function (e) { 
+    $('#paramFrom').submit(function (e) {
         e.preventDefault();
         let data = $(this).serializeArray()
         if (initcell) {
-            $.each(data, function (i, element) {  
+            $.each(data, function (i, element) {
                 let name = element.name
-                initcell[name] = element.value
+                if (initcell[name]) {
+                    initcell[name] = element.value
+                } else {
+                    console.log('元胞对象不存在' + name + '此参数名...');
+                }
             });
-        }else{
+        } else {
             alert('未进行初始化，设置参数失败..')
             throw new Error('设置参数失败..')
         }
@@ -273,12 +308,12 @@ $(document).ready(() => {
         $('#checkPanel').prop('checked', false);
     });
 
-    $('#paramDrag').click(function (e) { 
+    $('#paramDrag').click(function (e) {
         if ($(this).prop('checked')) {
             $('#parametersPanel').draggable({
                 disabled: false
-            })   
-        }else {
+            })
+        } else {
             $("#parametersPanel").draggable('disable');
         }
     });

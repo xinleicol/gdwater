@@ -36,12 +36,15 @@
                 <td>
                     <button id="mechanicalDispersion" class="cesium-button">机械弥散</button>
                 </td>
+                <td>
+                    <button id="test" class="cesium-button">测试</button>
+                </td>
 
             </tr>
 
             <tr>
                 <td>
-                    <p>扩散次数</p>
+                    <p>扩散时间（小时）</p>
                 </td>
                 <td>
                     <p id="diffutionNumber">0</p>
@@ -135,6 +138,12 @@
                 </tr>
                 <tr>
                     <td>
+                        <p>污染物浓度阈值(g/l)</p>
+                    </td>
+                    <td><input type="text" value="0.1" name="thresholdValue"></td>
+                </tr>
+                <tr>
+                    <td>
                         <p>饱和土壤体积含水率</p>
                     </td>
                     <td><input type="text" value="0.5652" name="_moistureContentS"></td>
@@ -169,8 +178,8 @@
             </form>
         </div>
     </div>
-    <script src="../../js/vadoseZone/globalName.js"></script>
-    <script type="module" src="../../js/vadoseZone/vadoseZone.js"></script>
+    <script src="../../js/vadoseZone-time/globalName.js"></script>
+    <script type="module" src="../../js/vadoseZone-time/vadoseZone.js"></script>
 </body>
 
 </html>

@@ -17,8 +17,8 @@ class InitCell {
     _cellY = 0.0 // y
     _cellZ = 0.0 //Z
     _cellDiagonal = 0.0 //斜向方向
-    _cellVolume = this._cellX * this._cellY * this._cellZ //元胞体积
-    _moistureContentS = 0.5652 //饱和土壤体积含水率
+    _cellVolume = 0.0 //元胞体积
+    _moistureContentS = 0.5653 //饱和土壤体积含水率
     _moistureContentR = 0.1641 //剩余土壤体积含水率
     _paramN = 1.5003 //参数n
     _paramM = 1 - 1 / this._paramN
@@ -28,6 +28,7 @@ class InitCell {
     mechanicalDegreeLong = 0.0642 //纵向（水流方向）机械弥散度
     mechanicalDegreeTran = this.mechanicalDegreeLong / 3 //横向（垂直水流方向）机械弥散度
     mechanicalDegreeVert = this.mechanicalDegreeLong / 3 //垂向（垂直水流方向）机械弥散度
+    thresholdValue = 0.1 //污染物浓度阈值
     constructor(waterLevel, waterVeloty, rows, columns, heights, dimensions) {
         this._waterLevel = waterLevel
         this._waterVeloty = waterVeloty
@@ -35,6 +36,7 @@ class InitCell {
         this._cellX = dimensions.x
         this._cellY = dimensions.y
         this._cellZ = dimensions.z
+        this._cellVolume = this._cellX * this._cellY * this._cellZ
         this._cellDiagonal = Math.sqrt(Math.pow(this._cellX, 2) + Math.pow(this._cellY, 2))
         this._rows = Cesium.defaultValue(this._rows, rows)
         this._columns = Cesium.defaultValue(this._columns, columns)
@@ -71,6 +73,7 @@ class InitCell {
                         'isPolluted': false, //是否被污染 
                         'worldPosition': undefined, //元胞世界坐标
                         'modelPosition': undefined, //模型坐标
+                        'echartPosition':undefined, //散点图坐标
                         'cellPosition': undefined, //没有乘以元胞边长的模型坐标
                         'mechanicalCoeffs': [], //机械弥散系数，0：纵向，1：横向，2：垂向
                         'cellOncentration':0.0, //污染物浓度
@@ -235,12 +238,13 @@ class InitCell {
      * @param {污染物质量} mass 
      */
     _updatePollutedState(currentCell, mass) {
-        if (mass > 0 & currentCell.isPolluted == false) {
+        currentCell.cellMass += mass
+        currentCell.cellOncentration = currentCell.cellMass / (this._cellVolume * currentCell.moistureContent)
+        if (mass > 0 & currentCell.isPolluted == false & currentCell.cellOncentration > this.thresholdValue) {
             currentCell.isPolluted = true
             this.nextPollutedArea.push(currentCell)
             this.isPollutedArea.push(currentCell)
         }
-        currentCell.cellMass += mass
     }
 
     /**
@@ -317,7 +321,8 @@ class InitCell {
         }
     }
     // 污染物质量更新，对流作用
-    updateCellMass() {
+    updateCellMass(timeStep) {
+        if (timeStep) this.timeStep = timeStep
         let isPollutedArea = this.isPollutedArea
         isPollutedArea.forEach((element) => {
             this._getOutMass(element)
@@ -348,31 +353,10 @@ class InitCell {
         }
     }
 
-    //更新周围元胞浓度
-    _updateMechanicalOncentration(currentCell){
-        let position = currentCell.position
-     
-        this.spreadArea[position[0]+1][position[1]  ][position[2]  ].cellOncentration =  
-        this.spreadArea[position[0]+1][position[1]  ][position[2]  ].cellMass / (this._cellVolume * currentCell.moistureContent)
-        
-        this.spreadArea[position[0]-1][position[1]  ][position[2]  ].cellOncentration =  
-        this.spreadArea[position[0]-1][position[1]  ][position[2]  ].cellMass / (this._cellVolume * currentCell.moistureContent)
-        
-        this.spreadArea[position[0]  ][position[1]+1][position[2]  ].cellOncentration =  
-        this.spreadArea[position[0]  ][position[1]+1][position[2]  ].cellMass / (this._cellVolume * currentCell.moistureContent)
-        
-        this.spreadArea[position[0]  ][position[1]-1][position[2]  ].cellOncentration =  
-        this.spreadArea[position[0]  ][position[1]-1][position[2]  ].cellMass / (this._cellVolume * currentCell.moistureContent)
-        
-        this.spreadArea[position[0]  ][position[1]  ][position[2]+1].cellOncentration =  
-        this.spreadArea[position[0]  ][position[1]  ][position[2]+1].cellMass / (this._cellVolume * currentCell.moistureContent)
-        
-        this.spreadArea[position[0]  ][position[1]  ][position[2]-1].cellOncentration =  
-        this.spreadArea[position[0]  ][position[1]  ][position[2]-1].cellMass / (this._cellVolume * currentCell.moistureContent)
-   
-    }
+    
 
     //计算更新周围元胞质量
+    //更新周围元胞浓度
     _updateMechanicalCell(currentCell){
         //感觉现在计算浓度没有意义
         //计算出了浓度变化后，还要转换为质量，还不如只计算质量，再用质量处于土壤体积和含水率
@@ -382,16 +366,16 @@ class InitCell {
         let position = currentCell.position
 
         //质量计算
-        let cellMassX = 2 * currentCell.cellMass * currentCell.mechanicalCoeffs[0] / Math.pow(this._cellX,2) 
-        let cellMassY = 2 * currentCell.cellMass * currentCell.mechanicalCoeffs[1] / Math.pow(this._cellY,2)
-        let cellMassZ = 2 * currentCell.cellMass * currentCell.mechanicalCoeffs[2] / Math.pow(this._cellZ,2)
+        let cellMassX = 2 * currentCell.cellMass * currentCell.mechanicalCoeffs[0] * this.timeStep/ Math.pow(this._cellX,2) 
+        let cellMassY = 2 * currentCell.cellMass * currentCell.mechanicalCoeffs[1] * this.timeStep/ Math.pow(this._cellY,2)
+        let cellMassZ = 2 * currentCell.cellMass * currentCell.mechanicalCoeffs[2] * this.timeStep/ Math.pow(this._cellZ,2)
     
         if (currentCell.cellMass - (cellMassX+cellMassY+cellMassZ) < 0) {
             alert('不满足稳定的收敛条件，请正确设置参数...')
             throw new Error('不满足稳定的收敛条件，请正确设置参数...')
         }
 
-        //质量更新，状态更新
+        //质量、更新，状态更新
         this._updatePollutedState(this.spreadArea[position[0]+1][position[1]  ][position[2]  ], cellMassX)
         this._updatePollutedState(this.spreadArea[position[0]-1][position[1]  ][position[2]  ], cellMassX)
         this._updatePollutedState(this.spreadArea[position[0]  ][position[1]+1][position[2]  ], cellMassY)
@@ -399,15 +383,12 @@ class InitCell {
         this._updatePollutedState(this.spreadArea[position[0]  ][position[1]  ][position[2]+1], cellMassZ)
         this._updatePollutedState(this.spreadArea[position[0]  ][position[1]  ][position[2]-1], cellMassZ)
         this._updatePollutedState(this.spreadArea[position[0]  ][position[1]  ][position[2]  ], -(cellMassX+cellMassY+cellMassZ))
-
-        //浓度更新
-        currentCell.cellOncentration = currentCell.cellMass / (this._cellVolume * currentCell.moistureContent)
-        this._updateMechanicalOncentration(currentCell)
     }
 
     // 污染物质量更新，机械弥散
     //该弥散的邻域是三维空间中上下、左右、前后的6个元胞对象，不包括斜向，斜向太复杂
-    mechanicalDispersion() {
+    mechanicalDispersion(timeStep) {
+        if (timeStep) this.timeStep = timeStep
         let isPollutedArea = this.isPollutedArea
         isPollutedArea.forEach((element) => {
             if (element.boundary == 'noBoundary') {

@@ -21,7 +21,7 @@ class XlEchart{
         },
         
         visualMap: {
-            top: 10,
+            top: 'middle',
             calculable: true,
             dimension: 'z',
             max:9,
@@ -37,16 +37,62 @@ class XlEchart{
         },
         tooltip: {},
         series: [{
-            name:'属性',
+            name:'x  y  z  质量g  浓度g/l',
             type: 'scatter3D',
+            //type: 'surface',
             data:[],
-            dimensions:['x','y','z','质量'],
+            dimensions:['x','y','z','质量','浓度'],
+            encode: { tooltip: [0,1,2,3,4] },
             itemStyle: {
-                // opacity: 1,
                 borderWidth: 1,
                 borderColor: 'rgba(255,255,255,0.8)'
             }
-        }]
+        }],
+        title: {
+            text: '污染物浓度分布',
+            subtext: 'xinlei',
+            textStyle:{color:'#fff'}
+        },
+        toolbox: {
+            show: true,
+            feature: {
+                myTool1: {
+                    show: true,
+                    title: '散点图',
+                    icon: 'image://../../image/scatter3D.png',
+                    onclick: function (){  
+                    }
+                },
+                myTool2: {
+                    show: true,
+                    title: '三维曲面图',
+                    icon: 'image://../../image/surface.png',
+                    onclick: function (){  
+                    }
+                },
+                myTool3: {
+                    show: true,
+                    title: '立体柱状图',
+                    icon: 'image://../../image/bar3D.png',
+                    onclick: function (){  
+                    }
+                },
+                dataView: {
+                    title:'数据视图',
+                    readOnly: false 
+                },//数据视图，可编辑
+                saveAsImage: {
+                    backgroundColor:'rgba(42, 42, 42, 0.8);'
+                },
+                magicType:{
+                    type:['scatter3D','surface','bar3D']
+                },
+                
+            },
+            iconStyle:{
+                color:'#fff'
+            },
+        },
     }
     constructor(dom,maxX,maxY,maxZ){
         this.chart = echarts.init(dom)
@@ -57,6 +103,10 @@ class XlEchart{
 
             this.options.visualMap.max = maxZ
         }
+
+        this.generateTool('myTool1','scatter3D')
+        this.generateTool('myTool2','surface')
+        this.generateTool('myTool3','bar3D')
     }
 
     generate(){
@@ -67,6 +117,18 @@ class XlEchart{
         xlType.determineArray(position)
         this.options.series[0].data.push(position)
         this.generate()
+    }
+
+    //清空数据
+    removeData(){
+        this.options.series[0].data = []
+    }
+
+    generateTool(toolName,typeStr){
+        this.options.toolbox.feature[toolName].onclick =  ()=> {
+            this.options.series[0].type = typeStr
+            this.generate()
+        }
     }
 }
 
