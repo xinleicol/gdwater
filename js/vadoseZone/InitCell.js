@@ -71,7 +71,6 @@ class InitCell {
                         'isPolluted': false, //是否被污染 
                         'worldPosition': undefined, //元胞世界坐标
                         'modelPosition': undefined, //模型坐标
-                        'cellPosition': undefined, //没有乘以元胞边长的模型坐标
                         'mechanicalCoeffs': [], //机械弥散系数，0：纵向，1：横向，2：垂向
                         'cellOncentration':0.0, //污染物浓度
 

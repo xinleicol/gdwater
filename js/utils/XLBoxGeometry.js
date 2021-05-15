@@ -189,12 +189,24 @@ class XLBoxGeometry extends XLBox {
         })
     }
 
+    //更改污染元胞颜色
     getAndSetBoxEntites(id,currentColor){
         XLType.determineCartesian3(id)
         Cesium.Check.typeOf.object('currentColor',currentColor)
         let boxEntity = this._boxEntities.getById (id.toString())
         if (boxEntity) {
             boxEntity.box.material = currentColor
+        }
+    }
+
+    //还原污染元胞颜色
+    restoreBoxEntites(id){
+        XLType.determineCartesian3(id)
+        let boxEntity = this._boxEntities.getById (id.toString())
+        if (boxEntity) {
+            boxEntity.box.material = this.boxEntitiesStyle.material
+            boxEntity.box.outline = this.boxEntitiesStyle.outline
+            boxEntity.box.outlineColor = this.boxEntitiesStyle.outlineColor
         }
     }
 

@@ -43,6 +43,7 @@ var colorDiff = Cesium.Color.subtract(startColor, endColor, new Cesium.Color())
 var maxDistance = null //污染源距离边界的最大长度平方，用来控制颜色渐变 
 var lastTime = 0 //上一次的时间
 var allTime = 0 //扩散总时间
+var requestAnimationID = null //请求回调函数的ID
 
 // 初始化
 function init() {
@@ -51,8 +52,11 @@ function init() {
         xlGeo.removeAllBoxsByEntities()
 
         time = 0
+        allTime = 0
         compeleted = false
         $('#diffutionNumber').text(time);
+        if (requestAnimationID) cancelAnimationFrame(requestAnimationID);
+        lastTime = 0;
     }
 
     initcell = new InitCell(waterLevel, 0, rows, cloumns, heights, dimensions) //初始化元胞网格
@@ -78,7 +82,7 @@ function convectionSimulate() {
     let timeStep = Cesium.JulianDate.secondsDifference(currentTime, lastTime) //秒 
     allTime += timeStep
 
-    if (timeStep > 0) {
+    if (timeStep != 0) {
        
         initcell.updateCellMass(timeStep) //质量更新 
 
@@ -89,14 +93,21 @@ function convectionSimulate() {
             let position = onePollutedCell.position
             let currentDistance = Math.sqrt(Math.pow(position[0] - 4, 2) + Math.pow(position[1] - 4, 2) + Math.pow(position[2] - 4, 2), 2)
             let currentColor = Cesium.Color.subtract(startColor, Cesium.Color.multiplyByScalar(colorDiff, currentDistance / maxDistance, new Cesium.Color()), new Cesium.Color()) //颜色差值
-            xlGeo.getAndSetBoxEntites(onePollutedCell.cellPosition, currentColor) //注意网格坐标的i是坐标系中的y   
+            xlGeo.getAndSetBoxEntites(onePollutedCell.modelPosition, currentColor) //注意网格坐标的i是坐标系中的y   
             
+        }
+
+        //时间后退更新
+        let length2 = initcell.nextDismissPollutionArea.length
+        for (let j = 0; j < length2; j++) {
+            let onePollutedCell = initcell.nextDismissPollutionArea.pop()
+            xlGeo.restoreBoxEntites(onePollutedCell.modelPosition)
         }
 
         prepareOver()
         lastTime = currentTime
     }
-    window.requestAnimationFrame(convectionSimulate)
+    requestAnimationID = window.requestAnimationFrame(convectionSimulate)
 }
 
 //机械弥散
@@ -110,7 +121,7 @@ function mechanicalDispersion() {
     let timeStep = Cesium.JulianDate.secondsDifference(currentTime, lastTime) //秒 
     allTime += timeStep
 
-    if (timeStep > 0) {
+    if (timeStep != 0) {
        
         initcell.mechanicalDispersion(timeStep) //质量更新 
 
@@ -121,14 +132,23 @@ function mechanicalDispersion() {
             let position = onePollutedCell.position
             let currentDistance = Math.sqrt(Math.pow(position[0] - 4, 2) + Math.pow(position[1] - 4, 2) + Math.pow(position[2] - 4, 2), 2)
             let currentColor = Cesium.Color.subtract(startColor, Cesium.Color.multiplyByScalar(colorDiff, currentDistance / maxDistance, new Cesium.Color()), new Cesium.Color()) //颜色差值
-            xlGeo.getAndSetBoxEntites(onePollutedCell.cellPosition, currentColor) //注意网格坐标的i是坐标系中的y   
+            xlGeo.getAndSetBoxEntites(onePollutedCell.modelPosition, currentColor) //注意网格坐标的i是坐标系中的y   
             
+        }
+
+        //时间后退更新
+        let length2 = initcell.nextDismissPollutionArea.length
+        for (let j = 0; j < length2; j++) {
+            let onePollutedCell = initcell.nextDismissPollutionArea.pop()
+            xlGeo.restoreBoxEntites(onePollutedCell.modelPosition)
         }
 
         prepareOver()
         lastTime = currentTime
     }
+   
     window.requestAnimationFrame(mechanicalDispersion)
+    
 
 }
 
@@ -139,7 +159,7 @@ function prepareStart() {
     generateBoxs()
     $('#selectBoxs').prop('checked', true);    
     xlGeo.getAndSetBoxEntites(new Cesium.Cartesian3(0, 0, 5), startColor)
-    maxDistance = Math.sqrt(Math.pow(4, 2) + Math.pow(4, 2) + Math.pow(4, 2), 2)
+    if (maxDistance == null) maxDistance = Math.sqrt(Math.pow(4, 2) + Math.pow(4, 2) + Math.pow(4, 2), 2);
     
 }
 function prepareOver() {

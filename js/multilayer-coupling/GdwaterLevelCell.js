@@ -2,7 +2,7 @@
  * 初始化元胞类
  * 
  */
-class GdwaterLevelCell {
+class InitCell {
     _m = 0.084 //静态扩散系数
     _d = 0.16 //斜向扩散系数
     _moleK = 1.28 * Math.pow(10,-9) //丙酮溶液分子扩散系数
@@ -414,4 +414,4 @@ class GdwaterLevelCell {
     }
 
 }
-export default GdwaterLevelCell
+export default InitCell

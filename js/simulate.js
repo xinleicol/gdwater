@@ -63,6 +63,8 @@ var particles = undefined //存放所有的粒子数组
  */
 async function init() {
     XLPar.generate() //生成粒子
+    XLPar.maxDistance = 100
+    XLPar.speedRatio = 10000
     XLPos.giveGridWorldAndModelPosition(XLCom.spreadArea) //给污染区域中的网格赋予世界坐标
     await XLPar.hasCompleted() //等待获取粒子对象
     particles = XLPar.particles

@@ -49,16 +49,17 @@ class XLPosition extends XLBox{
         
         let gridCoor = new Cesium.Cartesian3 ( girdPosition[1] , girdPosition[0],0 ) //y x坐标不要搞混
         let transform = new Cesium.Cartesian3(1,-1,1)
-        if (girdPosition.length == 3) {
+        let translation = new Cesium.Cartesian3(-this._halfGridX,this._halfGridY, 0)
+        if (girdPosition.length == 3) { //三维元胞模型时
             gridCoor = new Cesium.Cartesian3(girdPosition[1] , girdPosition[0], girdPosition[2] )
             transform = new Cesium.Cartesian3(1,-1,-1)
+            translation = new Cesium.Cartesian3(-this._halfGridX,this._halfGridY, this._halfGridZ)
         }
         Cesium.Cartesian3.multiplyComponents (gridCoor, transform, modelPosition) 
-        let translation = new Cesium.Cartesian3(-this._halfGridX,this._halfGridY, this._halfGridZ)
         Cesium.Cartesian3.add (modelPosition, translation, modelPosition)
+        Cesium.Cartesian3.multiplyComponents (modelPosition, this._dimensions, modelPosition)
         Cesium.Cartesian3.add(modelPosition,this._offset,modelPosition)
-        let modelPositionReal = Cesium.Cartesian3.multiplyComponents (modelPosition, this._dimensions, new Cesium.Cartesian3())
-        return [modelPosition,modelPositionReal] //第一个是没有乘以边长的模型坐标，第二个则乘了
+        return modelPosition 
     }
 
     /**
@@ -71,7 +72,7 @@ class XLPosition extends XLBox{
             throw new Error('模型矩阵不能为空...')
         }
         let modelPosition = this.convertToModelPosition(girdPosition)
-        let worldPositon = this.computerWorldPosition(modelPosition[1],this.modelMatrix)
+        let worldPositon = this.computerWorldPosition(modelPosition,this.modelMatrix)
         return worldPositon
     }
 
@@ -91,7 +92,7 @@ class XLPosition extends XLBox{
             let element1 = spreadArea[i];
             for (let j = 0; j < element1.length; j++) {
                 let element2 = element1[j];
-                element2.modelPosition = this.convertToModelPosition(element2.position)[1]
+                element2.modelPosition = this.convertToModelPosition(element2.position)
                 element2.worldPosition = this.computerWorldPosition(element2.modelPosition,this.modelMatrix)
             }
         }
@@ -109,9 +110,9 @@ class XLPosition extends XLBox{
                 let element2 = element1[j];
                 for (let k = 0; k < element2.length; k++) {
                     let element3 = element2[k];
-                    let resultes = this.convertToModelPosition(element3.position)
-                    element3.cellPosition = resultes[0]
-                    element3.modelPosition = resultes[1]
+                    element3.modelPosition = this.convertToModelPosition(element3.position)
+                    // element3.cellPosition = resultes[0]
+                    //element3.modelPosition = resultes[1]
                     element3.worldPosition = this.computerWorldPosition(element3.modelPosition,this.modelMatrix)
                 }
             }

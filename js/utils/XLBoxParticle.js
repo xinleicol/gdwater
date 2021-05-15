@@ -5,6 +5,19 @@ class XLBoxParticle extends XLBox {
     _centerPosition = null
     _url = 'http://127.0.0.1:5500/image/whatever.jpg'
     _particleStyle = {} //粒子样式
+    particleStyle = {
+        color: Cesium.Color.RED, //开始颜色
+        emitter: new Cesium.BoxEmitter(new Cesium.Cartesian3(1,1,1)),
+        speed: 0,
+        imageSize: new Cesium.Cartesian2(11.0, 11.0),
+        emissionRate: 20.0,
+        loop: false,
+        lifetime: 5,
+        particleNumber: 100,
+    } //粒子样式 改 2021年5月15日17:10:13
+    speedRatio = 1 //粒子运动速度倍率
+    maxDistance = 0.1 //粒子停止运动的最大范围
+    massRatio = 1 //粒子数、该元胞污染物质量比率
     _modelMatrix = null //模型到世界的旋转矩阵
     _emitterInitialLocation = new Cesium.Cartesian3() //粒子发射的模型坐标
     _emitterModelMatrix = undefined
@@ -12,13 +25,16 @@ class XLBoxParticle extends XLBox {
     _speed = 6000 //粒子速度
     _positionOffset = 0.0
     _dimensions = undefined //盒子长宽高
-    _update = function (particle, dt) {
+    _update = (particle, dt) => {
         if (particle.endPosition) { //有终点就会开始运动
             let distance = Cesium.Cartesian3.distance(particle.endPosition, particle.position)
             let positionDiff = Cesium.Cartesian3.subtract(particle.endPosition, particle.position, new Cesium.Cartesian3())
             Cesium.Cartesian3.normalize(positionDiff, particle.velocity)
-            Cesium.Cartesian3.multiplyByScalar(particle.velocity, 10000, particle.velocity) //(优化)
-            if (distance < 100) { //(优化)
+            //Cesium.Cartesian3.multiplyByScalar(particle.velocity, 10000, particle.velocity) //(优化)
+            Cesium.Cartesian3.multiplyByScalar(particle.velocity, this.speedRatio, particle.velocity) //(优化)
+            
+             //if (distance < 100) { //(优化)
+            if (distance < this.maxDistance) { 
                 particle.endPosition = null
                 particle.velocity = new Cesium.Cartesian3()
             }
@@ -80,6 +96,19 @@ class XLBoxParticle extends XLBox {
             lifetime: 5,
             particleNumber: 100,
             //mass:10.0,
+            updateCallback: this._update,
+            modelMatrix: this._modelMatrix,
+            emitterModelMatrix: this._emitterModelMatrix
+        });
+        this.particleSystem = scene.primitives.add(newParticleSystem)
+    }
+
+    //改 2021年5月15日17:04:45
+    generateCoupling() {
+        if (this._centerPosition == null | this._modelMatrix == null) throw new Error('污染源、模型矩阵不能为空...');
+        let newParticleSystem = new XLParticleSystem({
+            ...this.particleStyle,
+            image: XLBoxParticle.getImage(),
             updateCallback: this._update,
             modelMatrix: this._modelMatrix,
             emitterModelMatrix: this._emitterModelMatrix
@@ -155,7 +184,7 @@ class XLBoxParticle extends XLBox {
         if (particlePool.length != 0) { //当前元胞粒子池中有粒子
             let len = particlePool.length
             let mass = nextPollutedGrid.cellMass
-            let massFormate = Math.ceil(mass)
+            let massFormate = Math.ceil(mass) * this.massRatio //当前元胞该有的粒子数量
             if (massFormate > len) {
                 let catchParticleNum = massFormate - len
                 this._particleCatch(currentPollutedGrid, nextPollutedGrid, catchParticleNum)
@@ -164,7 +193,7 @@ class XLBoxParticle extends XLBox {
             let nextPollutedGridChange = nextPollutedGrid
             while (nextPollutedGridChange.fatherNode) { //判断是否已经到了根节点，父节点为空就是根节点
                 let mass = nextPollutedGridChange.cellMass
-                let massFormate = Math.ceil(mass)
+                let massFormate = Math.ceil(mass) * this.massRatio
                 let particleNumber = nextPollutedGridChange.particlePool.length //当前池中粒子数量
                 let catchParticleNum = massFormate - particleNumber > 0 ? massFormate - particleNumber : 0 //要从父节点获取的粒子数量
 
