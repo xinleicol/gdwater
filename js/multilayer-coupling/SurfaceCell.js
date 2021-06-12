@@ -1,3 +1,4 @@
+import XLType from "../utils/XLType.js"
 
 /**
  * 计算类
@@ -14,9 +15,12 @@ class SurfaceCell{
     spreadArea = undefined //所有元胞对象数组
     isPollutedArea = [] //所有被污染的元胞数组
     nextPollutedArea = [] //下一时刻将被污染的元胞数组
-    constructor(heightMatrix,mass,rows,columns){
+    verKdiff = 0.2 //污染物向土壤中的渗透系数 m/h
+    intervalTime = 5 //假定1m元胞的扩散时间步长为5小时 1/0.2
+    verMass = this.verKdiff * this.intervalTime //一个步长时污染向土壤中渗透量
+    pollutionSourceCell = undefined //污染源元胞
+    constructor(heightMatrix,rows,columns){
         this._heightMatrix = heightMatrix
-        this._mass = mass
         this._rows = Cesium.defaultValue(this._rows, rows)
         this._columns = Cesium.defaultValue(this._columns,columns)
         this._init()
@@ -34,9 +38,9 @@ class SurfaceCell{
             for (let j = 0; j < this._columns; j++) {
                 this.spreadArea[i][j] = {
                     'position':[i,j],
-                    'cellMass':this._mass[i][j],
+                    'cellMass': 0,
                     'elevation':this._heightMatrix[i][j],
-                    'kdiff':0.0, 
+                    'kdiffs':[], 
                     'boundary':'noBoundary', //边界条件
                     'isPolluted':false, //是否被污染
                     'fatherNode':null, //父节点
@@ -45,6 +49,7 @@ class SurfaceCell{
                     'isTrailPloy':false, //当前元胞是否已经有流动线
                     'worldPosition':undefined, //元胞世界坐标
                     'modelPosition':undefined, //模型坐标
+                    'name':"surfaceCell", //表示元胞代表的地质结构
                     
                 }               
                 if (i == 0 ) {
@@ -71,11 +76,22 @@ class SurfaceCell{
                 if (i == this._rows & j == this._columns) {
                     this.spreadArea[i][j].boundary = 'rightButtomBoundary'
                 }
-                if (i == this._halfGridX & j == this._halfGridY) {//污染源初始化时已经被污染
-                    this.spreadArea[i][j].isPolluted = true
-                    this.isPollutedArea.push(this.spreadArea[i][j])
-                }
             }
+        }
+    }
+
+    /**
+     * 设置污染源、质量
+     * @param {行} row 
+     * @param {列} col 
+     * @param {质量} mass 
+     */
+    setPollutedSourceCell(row,col,mass){
+        this.spreadArea[row][col].cellMass = mass;
+        if (!this.spreadArea[row][col].isPolluted) {
+            this.spreadArea[row][col].isPolluted = true;
+            this.isPollutedArea.push(this.spreadArea[row][col]);
+            this.pollutionSourceCell = this.spreadArea[row][col];
         }
     }
 
@@ -90,6 +106,10 @@ class SurfaceCell{
         let center = heightMatrix[i][j]
         let hfull = 0
         let kdiffs = []
+        if (this.spreadArea[i][j].kdiffs.length != 0) { //计算过的话直接返回
+            return this.spreadArea[i][j].kdiffs
+        }
+
         for (let m = i-1; m < i+2; m++) {
             for (let n = j-1; n < j+2; n++) {
                 const element = heightMatrix[m][n]
@@ -108,24 +128,14 @@ class SurfaceCell{
                 const element = heightMatrix[m][n]
                 let heightDiff = center-element
                 if (heightDiff >0) {
-                    let kdiff = heightDiff / hfull
                     kdiffs[k] = heightDiff / hfull
-                    this.spreadArea[m][n].kdiff = kdiff
                 }else{
                     kdiffs[k] = 0
                 }
                 k ++
             }            
         }
-        // kdiffs[0] = (heightMatrix[i-1][j-1] -center)/ hfull
-        // kdiffs[1] = (heightMatrix[i-1][j]-center)   / hfull
-        // kdiffs[2] = (heightMatrix[i-1][j]-center)   / hfull
-        // kdiffs[3] = (heightMatrix[i][j-1] -center)  / hfull
-        // kdiffs[4] = (heightMatrix[i][j]   -center)  / hfull
-        // kdiffs[5] = (heightMatrix[i][j+1] -center)  / hfull
-        // kdiffs[6] = (heightMatrix[i+1][j-1] -center)/ hfull
-        // kdiffs[7] = (heightMatrix[i+1][j]   -center)/ hfull
-        // kdiffs[8] = (heightMatrix[i+1][j+1] -center)/ hfull
+        this.spreadArea[i][j].kdiffs = kdiffs
         this._kdiffs = kdiffs
         return kdiffs
     }
@@ -152,14 +162,17 @@ class SurfaceCell{
         for (let m = i-1; m < i+2; m++) {
             for (let n = j-1; n < j+2; n++) {
                 let currentMass = this.spreadArea[m][n].cellMass
+                if (currentMass -centerMass > 0) { //如果该相邻元胞大于中央元胞则跳过这次计算
+                    continue
+                }
                 if (kdiffs[k] > 0 ) {
                     if (k %2 == 1) {
-                        let updateCellMass = mxshu* (kdiffs[k])*(currentMass -centerMass)
+                        let updateCellMass = mxshu* (kdiffs[k])*(currentMass -centerMass) //<0
                         this.spreadArea[m][n].cellMass += -updateCellMass //更新下个污染元胞的质量
                         crossMass += updateCellMass // 当前元胞的静态扩散量
                         
                     }else{
-                        let updateCellMass = mxshu* dxshu * (kdiffs[k])*(currentMass - centerMass) 
+                        let updateCellMass = mxshu* dxshu * (kdiffs[k])*(currentMass - centerMass)  //<0
                         this.spreadArea[m][n].cellMass += -updateCellMass
                         inclineMass += updateCellMass
                     }
@@ -174,53 +187,12 @@ class SurfaceCell{
                 k ++
             }
         }
+        
         let newMass = centerMass + crossMass + inclineMass
         this.spreadArea[i][j].cellMass = newMass
         return newMass
-        
-        // let newMass = centerMass
-        // +m * (kdiffs[1]*(this.spreadArea[i-1][j].cellMass - centerMass)
-        // +kdiffs[7] *(this.spreadArea[i+1][j].cellMass -centerMass)
-        // +kdiffs[3]*(this.spreadArea[i][j-1].cellMass - centerMass)
-        // +kdiffs[5]* (this.spreadArea[i][j+1].cellMass -centerMass))
-        // +m* d *(kdiffs[0]*(this.spreadArea[i-1][j-1].cellMass - centerMass)
-        // +kdiffs[2]*(this.spreadArea[i-1][j+1].cellMass -centerMass)
-        // +kdiffs[6] *(this.spreadArea[i+1][j-1].cellMass -centerMass)
-        // +kdiffs[8] *(this.spreadArea[i+1][j+1].cellMass -centerMass))
-        // return newMass
     }
 
-    /**
-     * 计算元胞一次模拟后的临近3*3元胞的污染物质量（废弃）
-     * @param {污染源行号} i 
-     * @param {污染源列号} j 
-     * 
-     */
-    _computerCellMass(i,j){
-        let currentSpreadArea = this.spreadArea[i][j]
-        let updateSpreadArea = [] //下个时刻会被污染的元胞对象
-        if (currentSpreadArea.boundary == 'noBoundary') {  //当前元胞无边界  
-            for (let m = i-1; m < i+2; m++) {
-                for (let n = j-1; n < j+2; n++) {
-                    let nearSpreadArea = this.spreadArea[m][n]
-                    if (nearSpreadArea.boundary == 'noBoundary') { //相邻元胞无边界
-                        let newMass = this._computerNewMass(m,n)        
-                        if (newMass > 0) { //质量大于0则更新
-                            nearSpreadArea.beforeCellMass = newMass
-                            // nearSpreadArea.isPolluted = true
-                            nearSpreadArea.isMassUpdate = true
-                            if (! nearSpreadArea.isPolluted) { //未被污染则更新
-                                updateSpreadArea.push(nearSpreadArea)
-                                this.isPollutedArea.push(nearSpreadArea)
-                                nearSpreadArea.isPolluted = true
-                            }
-                        }
-                    }    
-                }
-            }
-        }
-        return updateSpreadArea
-    }
 
     /**
      * 污染物质量计算、更新的入口函数
@@ -228,36 +200,34 @@ class SurfaceCell{
      */
     computerCellMass(currentSpreadArea){
         if (currentSpreadArea.boundary == 'noBoundary') {  //当前元胞无边界  
+            
+            if (!XLType.xlAlert(!this.isEnding(),"迭代已终止！")) return //终止迭代
+            
             let position = currentSpreadArea.position
             this._computerNewMass(position[0],position[1])
         }
         return this.nextPollutedArea
     }
 
-    /**
-     * 更新一个时态后的元胞污染质量(废弃)
-     */
-    updateCellMass(){
-        for (let i = 0; i < this._rows; i++) {
-            for (let j = 0; j < this._columns; j++) {
-                if (this.spreadArea[i][j].isMassUpdate) {
-                    this.spreadArea[i][j].cellMass = this.spreadArea[i][j].beforeCellMass
-                    this.spreadArea[i][j].isMassUpdate = false
-                }
-            }
-        }
-    }
 
     /**
-     *（废弃）
-     * @param {第一个元胞对象} grid1 
-     * @param {第二个元胞对象} grid2 
-     * @returns  判断第一个元胞高程是否小于第二个，小于为真，大于为假
+     * 判断是否达到迭代终止条件
+     * @returns 真假
      */
-    heightIsLess(grid1,grid2){
-        if(Cesium.defined(grid1.elevation) & Cesium.defined(grid2.elevation)){
-            return grid1.elevation - grid2.elevation < 0 ? true:false
+    isEnding(){
+        let pollutionSourceCell = this.pollutionSourceCell;
+        if (pollutionSourceCell.childNode.length != 0) {
+            pollutionSourceCell.childNode.forEach(element => {
+                if (element.cellMass > pollutionSourceCell.cellMass) {
+                    return true;
+                }else{
+                    return false;
+                }
+            });     
+        }else{
+            return false;
         }
+        
     }
 
 }

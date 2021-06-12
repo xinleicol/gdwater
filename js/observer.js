@@ -8,7 +8,7 @@ var trBox = viewer.entities.add({
         outline: true,
         outlineColor: Cesium.Color.BURLYWOOD,
         heightReference: Cesium.HeightReference.CLAMP_TO_GROUND, //贴地
-        show: false,
+        show: true,
     },
 });
 

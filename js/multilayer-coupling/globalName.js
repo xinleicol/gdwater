@@ -12,6 +12,7 @@ var viewer = new Cesium.Viewer('cesiumContainer',{
 
 viewer._cesiumWidget._creditContainer.style.display="none";   //版权控件的显示隐藏
 var scene = viewer.scene;
+var camera = scene.camera;
 scene.globe.baseColor = Cesium.Color.BLACK;
 
 

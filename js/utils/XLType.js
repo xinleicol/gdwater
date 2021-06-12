@@ -34,8 +34,19 @@ class XLType{
         }
     }
 
+     //判断cartesian3
+    static determineCartesian3s(...args){
+        args.forEach(arg => {
+            if (! ('x'in arg & 'y' in arg & 'z' in arg)) {
+                throw new Error('请传入一个cartesian3对象....')
+            }
+        })
+       
+    }
+
 
     // 是否继续进行
+    //当传入参数都为真时，返回结果为真； 当传入参数有一个为假时，会弹出警告框，返回假
     static xlAlert(){
         let length = arguments.length
         let flag = true
@@ -52,7 +63,25 @@ class XLType{
         return flag      
     }
 
-   
+    //参数不能为空或未定义
+   static notBeNull(...args){
+        args.forEach(arg => {
+           if (arg == null || arg == undefined) {
+               throw new Error("传入参数不能为空或未定义...")
+           }
+       });
+   }
+
+   //不能为空或未定义
+    static isDefined(...args){
+        let flag = true;
+        for (const arg of args) {
+            if (arg == null || arg == undefined) {
+                flag = false;
+            }
+        }
+        return flag;
+    }
        
     
 }    

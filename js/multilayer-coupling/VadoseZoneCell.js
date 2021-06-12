@@ -28,6 +28,8 @@ class VadoseZoneCell {
     mechanicalDegreeLong = 0.0642 //纵向（水流方向）机械弥散度
     mechanicalDegreeTran = this.mechanicalDegreeLong / 3 //横向（垂直水流方向）机械弥散度
     mechanicalDegreeVert = this.mechanicalDegreeLong / 3 //垂向（垂直水流方向）机械弥散度
+    pollutionSourceCell = undefined //污染源元胞
+    verKdiff = 0.2 //污染向潜水面的扩散系数
     constructor(waterLevel, waterVeloty, rows, columns, heights, dimensions) {
         this._waterLevel = waterLevel
         this._waterVeloty = waterVeloty
@@ -73,6 +75,10 @@ class VadoseZoneCell {
                         'modelPosition': undefined, //模型坐标
                         'mechanicalCoeffs': [], //机械弥散系数，0：纵向，1：横向，2：垂向
                         'cellOncentration':0.0, //污染物浓度
+                        'isTrailPloy':false, //流动线？
+                        'fatherNode':null, //父节点,先不写子节点，貌似没什么用
+                        'name':"vadoseCell", //元胞的名称
+                        'particlePool':[], //粒子池
 
                     }
                     if (k == 0) {
@@ -115,6 +121,8 @@ class VadoseZoneCell {
         if ((!this.spreadArea[row][col][heigths].isPolluted) & (this.spreadArea[row][col][heigths].cellMass > 0)) {
             this.spreadArea[row][col][heigths].isPolluted = true
             this.isPollutedArea.push(this.spreadArea[row][col][heigths])
+            this.spreadArea[row][col][heigths].fatherNode = [row,col]
+            this.pollutionSourceCell = this.spreadArea[row][col][heigths] //注意，只有一个污染源，多个污染源的情况需要改代码
         }
     }
 
@@ -233,11 +241,12 @@ class VadoseZoneCell {
      * @param {被污染元胞} currentCell 
      * @param {污染物质量} mass 
      */
-    _updatePollutedState(currentCell, mass) {
+    _updatePollutedState(currentCell, mass, position1, position2) {
         if (mass > 0 & currentCell.isPolluted == false) {
             currentCell.isPolluted = true
             this.nextPollutedArea.push(currentCell)
             this.isPollutedArea.push(currentCell)
+            this.spreadArea[position2[0]][position2[1]][position2[2]].fatherNode = position1
         }
         currentCell.cellMass += mass
     }
@@ -262,14 +271,14 @@ class VadoseZoneCell {
         const y2 = position2[0]
         const z2 = position2[2]
 
-        this._updatePollutedState(this.spreadArea[x2][y1][z1], massX)
-        this._updatePollutedState(this.spreadArea[x2][y2][z1], massXY)
-        this._updatePollutedState(this.spreadArea[x1][y2][z1], massY)
-        this._updatePollutedState(this.spreadArea[x2][y1][z2], massXZ)
-        this._updatePollutedState(this.spreadArea[x2][y2][z2], massXYZ)
-        this._updatePollutedState(this.spreadArea[x1][y2][z2], massYZ)
-        this._updatePollutedState(this.spreadArea[x1][y1][z2], massZ)
-        this._updatePollutedState(this.spreadArea[x1][y1][z1], -(massX + massY + massZ + massXY + massXZ + massYZ + massXYZ))
+        this._updatePollutedState(this.spreadArea[x2][y1][z1], massX  ,position1, [x2,y1,z1])
+        this._updatePollutedState(this.spreadArea[x2][y2][z1], massXY ,position1, [x2,y2,z1])
+        this._updatePollutedState(this.spreadArea[x1][y2][z1], massY  ,position1, [x1,y2,z1])
+        this._updatePollutedState(this.spreadArea[x2][y1][z2], massXZ ,position1, [x2,y1,z2])
+        this._updatePollutedState(this.spreadArea[x2][y2][z2], massXYZ,position1, [x2,y2,z2])
+        this._updatePollutedState(this.spreadArea[x1][y2][z2], massYZ ,position1, [x1,y2,z2])
+        this._updatePollutedState(this.spreadArea[x1][y1][z2], massZ  ,position1, [x1,y1,z2])
+        this._updatePollutedState(this.spreadArea[x1][y1][z1], -(massX + massY + massZ + massXY + massXZ + massYZ + massXYZ), position1, [x1,y1,z1])
 
     }
 
@@ -315,6 +324,7 @@ class VadoseZoneCell {
             this._updateCellMassOneStep(currentCell.position, goalCellPosition, massX, massY, massZ, massXY, massXZ, massYZ, massXYZ)
         }
     }
+
     // 污染物质量更新，对流作用
     updateCellMass() {
         let isPollutedArea = this.isPollutedArea
@@ -390,13 +400,13 @@ class VadoseZoneCell {
             throw new Error('不满足稳定的收敛条件，请正确设置参数...')
         }
 
-        //质量更新，状态更新
-        this._updatePollutedState(this.spreadArea[position[0]+1][position[1]  ][position[2]  ], cellMassX)
-        this._updatePollutedState(this.spreadArea[position[0]-1][position[1]  ][position[2]  ], cellMassX)
-        this._updatePollutedState(this.spreadArea[position[0]  ][position[1]+1][position[2]  ], cellMassY)
-        this._updatePollutedState(this.spreadArea[position[0]  ][position[1]-1][position[2]  ], cellMassY)
-        this._updatePollutedState(this.spreadArea[position[0]  ][position[1]  ][position[2]+1], cellMassZ)
-        this._updatePollutedState(this.spreadArea[position[0]  ][position[1]  ][position[2]-1], cellMassZ)
+        //质量更新，状态更新，这里后面修改
+        this._updatePollutedState(this.spreadArea[position[0]+1][position[1]  ][position[2]  ], cellMassX, position1)
+        this._updatePollutedState(this.spreadArea[position[0]-1][position[1]  ][position[2]  ], cellMassX, position1)
+        this._updatePollutedState(this.spreadArea[position[0]  ][position[1]+1][position[2]  ], cellMassY, position1)
+        this._updatePollutedState(this.spreadArea[position[0]  ][position[1]-1][position[2]  ], cellMassY, position1)
+        this._updatePollutedState(this.spreadArea[position[0]  ][position[1]  ][position[2]+1], cellMassZ, position1)
+        this._updatePollutedState(this.spreadArea[position[0]  ][position[1]  ][position[2]-1], cellMassZ, position1)
         this._updatePollutedState(this.spreadArea[position[0]  ][position[1]  ][position[2]  ], -(cellMassX+cellMassY+cellMassZ))
 
         //浓度更新

@@ -85,6 +85,32 @@ class XLBox{
         let latitude = Cesium.Math.toDegrees(postionCarto.latitude )
         return new Cesium.Cartesian3(longitude,latitude)
     }
+
+    /**
+     * 经纬度转cartesian3
+     * @param {经度} lon 
+     * @param {纬度} lat 
+     * @returns 
+     */
+    degreeToCartesian3(lon, lat){
+        return Cesium.Cartesian3.fromDegrees(lon, lat);
+    }
+
+    //经纬度转弧度
+    degreeToRadians(lon, lat){
+        return Cesium.Cartographic.fromDegrees(lon, lat);
+    }
+
+    //获取地形高度
+    getTerrainHeight(terrainProvider, positions){
+       return Cesium.sampleTerrainMostDetailed(terrainProvider, positions);
+    }
+
+    //弧度转笛卡尔坐标
+    radiansToCartesian3(cartographic){
+       return Cesium.Cartographic.toCartesian(cartographic, Cesium.Ellipsoid.WGS84, new Cesium.Cartesian3());
+    }
+
 }
 
 export default XLBox

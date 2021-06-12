@@ -113,7 +113,7 @@ function main() {
             }
             //粒子模拟
             // particleSimulate(currentPollutedGrid, nextPollutedArea[j])
-            XLPar.particleSimulate(currentPollutedGrid, nextPollutedArea[j],XLCom.spreadArea)
+            XLPar.particleSimulate_backpack(currentPollutedGrid, nextPollutedArea[j],XLCom.spreadArea)
         }
         XLGeo._TrailPloyLineColor = Cesium.Color.fromRandom() //每往外扩散一层，流动线变换一次颜色
     }

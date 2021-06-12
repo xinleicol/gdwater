@@ -172,14 +172,13 @@ class XLBoxParticle extends XLBox {
 
 
 
-    /**
+    /**弃用 2021年5月17日15:23:11
      * 模拟粒子飞行，从父节点拿元胞粒子，父节点再从父节点拿去，迭代
-     * @param {当前污染的元胞} currentPollutedGrid 
      * @param {被该元胞污染的下层元胞} nextPollutedGrid 
      * @param {粒子飞行的模型终点坐标} endModelPositon 
      * @param {旋转变化矩阵} modelMatrix 
      */
-    particleSimulate(currentPollutedGrid, nextPollutedGrid,spreadArea) {
+    particleSimulate_backpack(currentPollutedGrid, nextPollutedGrid,spreadArea) {
         let particlePool = nextPollutedGrid.particlePool
         if (particlePool.length != 0) { //当前元胞粒子池中有粒子
             let len = particlePool.length
@@ -204,6 +203,42 @@ class XLBoxParticle extends XLBox {
                 nextPollutedGridChange = fatherPollutedGrid //传入父节点，再从上级拿取粒子，迭代进行
             }
         }
+    }
+
+
+    /**
+     * 优化 2021年5月17日15:23:01
+     * @param {下个步长污染的元胞} nextPollutedGrid 
+     * @param {地表元胞} spreadArea 
+     * @param {包气带元胞} vadoseSpreadArea 
+     * @param {潜水层元胞} gdwaterSpreadArea 
+     */
+    particleSimulate(nextPollutedGrid,spreadArea,vadoseSpreadArea, gdwaterSpreadArea) {
+        let particlePool = nextPollutedGrid.particlePool
+        
+        let len = particlePool.length
+        let mass = nextPollutedGrid.cellMass
+        let massFormate = Math.ceil(mass) * this.massRatio //当前元胞该有的粒子数量
+        if (massFormate > len) {
+            let catchParticleNum = massFormate - len
+            let nextPollutedGridChange = nextPollutedGrid
+            while (nextPollutedGridChange.fatherNode) { //判断是否已经到了根节点，父节点为空就是根节点
+                let fatherPollutedGridPositon = nextPollutedGridChange.fatherNode //父节点的网格索引
+                let fatherPollutedGrid = undefined;
+                if ((nextPollutedGridChange.name == "surfaceCell" || nextPollutedGridChange.name == "vadoseCell") & fatherPollutedGridPositon.length == 2) { //父节点在地表
+                    fatherPollutedGrid = spreadArea[fatherPollutedGridPositon[0]][fatherPollutedGridPositon[1]] //父节点的元胞
+                }else if((nextPollutedGridChange.name == "vadoseCell" || nextPollutedGridChange.name == "gdwaterCell") & fatherPollutedGridPositon.length == 3){ //父节点在包气带
+                    fatherPollutedGrid = vadoseSpreadArea[fatherPollutedGridPositon[0]][fatherPollutedGridPositon[1]][fatherPollutedGridPositon[2]] //父节点的元胞
+                }else if (nextPollutedGridChange.name == "gdwaterCell" & fatherPollutedGridPositon.length == 2) { //父节点在潜水面
+                    fatherPollutedGrid = gdwaterSpreadArea[fatherPollutedGridPositon[0]][fatherPollutedGridPositon[1]] //父节点的元胞
+                }else{
+                    console.log("出现父节点找不到的情况啦...");
+                }
+                this._particleCatch(fatherPollutedGrid, nextPollutedGridChange, catchParticleNum)
+               
+                nextPollutedGridChange = fatherPollutedGrid //传入父节点，再从上级拿取粒子，迭代进行
+            }
+        }   
     }
 
 
@@ -245,6 +280,9 @@ class XLBoxParticle extends XLBox {
     _catchOriginParticle(particle, system, endWorldPositon) { //获取粒子池中的粒子,给粒子添加终点位置
         system._Particles[particle.id].endPosition = endWorldPositon
     }
+
+    
+    
 
 }
 

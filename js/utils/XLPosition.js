@@ -13,9 +13,6 @@ class XLPosition extends XLBox{
     _rows = 9 //行数，Y
     _columns = 9 //列数，X
     _heights = 9
-    _halfGridX = Math.floor(this._columns /2) // 元胞区域X方向半长
-    _halfGridY = Math.floor(this._rows /2) //元胞区域Y方向半长
-    _halfGridZ = Math.floor(this._heights /2) //元胞区域Y方向半长
     constructor(centerPosition,dimensions,offset,rows,columns,heights){
         super()
         this._dimensions = dimensions
@@ -23,6 +20,9 @@ class XLPosition extends XLBox{
         this._rows = Cesium.defaultValue(rows,this._rows )
         this._columns = Cesium.defaultValue(columns,this._columns)
         this._heights = Cesium.defaultValue(heights,this._heights)
+        this._halfGridX = Math.floor(this._columns /2) // 元胞区域X方向半长
+        this._halfGridY = Math.floor(this._rows /2) //元胞区域Y方向半长
+        this._halfGridZ = Math.floor(this._heights /2) //元胞区域Y方向半长
         this._init(centerPosition)        
     }
 

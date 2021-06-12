@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+
+    <script src="../../CesiumUnminified/Cesium.js"></script>
+    <link href="../../CesiumUnminified/Widgets/widgets.css" rel="stylesheet">
+    <script src="../../js/source/Sandcastle-header.js"></script>
+    <script src="../../js/source/jquery-3.6.0.min.js"></script>
+    <!-- <link rel="stylesheet" href="../../css/bootstrap.min.css"> -->
+    <style>
+        @import url(../../css/bucket.css);
+        #toolbar>#main, #surfaceDiv, #vadoseDiv, #gdwaterDiv, #offsetDiv, #locationDiv, #header{
+            background: rgba(42, 42, 42, 0.8);
+            padding: 2px;
+            margin: 5px;
+            border-radius: 4px;
+            border-radius: 5px;
+        }
+
+        #toolbar table tr {
+            transform: translateY(0);
+            transition: transform 0.4s ease-out;
+            padding: 2px;
+        }
+
+        #toolbar table td {
+            padding: 2px;
+        }
+
+        #toolbar table td :disabled{
+            cursor: not-allowed;
+        }
+
+        #toolbar input {
+            vertical-align: middle;
+            padding-top: 2px;
+            padding-bottom: 2px;
+        }
+
+        #surfaceDiv{
+            padding: 5px;
+        }
+
+
+
+    </style>
+</head>
+
+<body>
+    <div id="cesiumContainer" class="fullSize"></div>
+    <div id="toolbar">
+        <div id="header" role="heading" style="width: 190px">
+            <table>
+                <tr>
+                    <td><button class="cesium-button" id="init">初始化</button></td>
+                    <td><button class="cesium-button" id="loadingBox">加载网格</button></td>
+                </tr>
+            </table>
+        </div>
+        <div id="main" style="width: 190px">
+            <table>
+                <tr>
+                    <td><input type="checkbox" id="isDepthTest" checked></td>
+                    <td>地形深度检测</td>
+                </tr>
+                <tr>
+                    <td> <input type="checkbox" id="trackBox" checked></td>
+                    <td>
+                        追踪包围盒
+                    </td>
+                </tr>
+                <tr>
+                    <td><input type="checkbox" id="location"></td>
+                    <td>经纬度范围</td>
+                </tr>
+                <tr>
+                    <td><input type="checkbox" id="centerOffset"></td>
+                    <td>模型偏移</td>
+                </tr>
+                <tr>
+                    <td><input type="checkbox" id="surfaceBox"></td>
+                    <td>地表参数</td>
+                </tr>
+                <tr>
+                    <td><input type="checkbox" id="vadoseBox"></td>
+                    <td>土壤参数</td>
+                </tr>
+                <tr>
+                    <td><input type="checkbox" id="gdwaterBox"></td>
+                    <td>潜水面参数</td>
+                </tr>
+            </table>
+        </div>
+
+        <div id="locationDiv" hidden>
+            <header class="cesium-cesiumInspector-button">
+                <p style="border-bottom: 1px solid #aaa ; padding-bottom: 3px;">影像经纬度范围</p>    
+            </header>
+            <table>
+                <tr><td>经度</td>
+                    <td><input type="text" name="lon1"></td>
+                    <td><input type="text" name="lon2"></td>
+                </tr>
+                <tr><td>纬度</td>
+                    <td><input type="text" name="lat1"></td>
+                    <td><input type="text" name="lat2"></td>
+                </tr>
+            </table>
+        </div>
+       
+        <div id="offsetDiv" hidden>
+            <header class="cesium-cesiumInspector-button">
+                <p style="border-bottom: 1px solid #aaa ; padding-bottom: 3px;">模型偏移面板</p>    
+            </header>
+            <table>
+                <tr><td>X轴（米）</td>
+                    <td><input type="text" name="xOffset"></td>
+                </tr>
+                <tr><td>Y轴（米）</td>
+                    <td><input type="text" name="yOffset"></td>
+                </tr>
+                <tr><td>Z轴（米）</td>
+                    <td><input type="text" name="zOffset"></td>
+                </tr>
+            </table>
+            <div align="center">
+                <button class="cesium-button" id="offsetCommit">确认</button>
+            </div>
+        </div>
+
+        <div id="surfaceDiv" hidden>
+            <header class="cesium-cesiumInspector-button">
+                <p style="border-bottom: 1px solid #aaa ; padding-bottom: 3px;">地表网格属性面板</p>    
+            </header>
+            <table>
+                <tr>
+                    <td>东西方向网格个数</td>
+                    <td><input type="text" name="_lengthNum" value="10"></td>
+                </tr>
+                <tr>
+                    <td>南北方向网格个数</td>
+                    <td><input type="text" name="_widthNum" value="10"></td>
+                </tr>
+                <tr>
+                    <td>网格长（东西方向）</td>
+                    <td><input type="text" name="boxLength" value="10" disabled ></td>
+                </tr>
+                <tr>
+                    <td>网格宽（南北方向）</td>
+                    <td><input type="text" name="boxWidth" value="10" disabled></td>
+                </tr>
+                <tr>
+                    <td>网格高（垂向方向）</td>
+                    <td><input type="text" name="boxHeight" value="10" disabled></td>
+                </tr>  
+            </table>
+            <div align="center">
+                <button class="cesium-button" id="sufaceCommit">确认</button>
+            </div>
+        </div>
+
+        <div id="vadoseDiv" hidden>
+            <header class="cesium-cesiumInspector-button">
+                <p style="border-bottom: 1px solid #aaa ; padding-bottom: 3px;">土壤层网格属性面板</p>    
+            </header>
+            <table>
+                <tr>
+                    <td>土壤深度（米）</td>
+                    <td><input type="text" name="_depth" value="200" id="_depth"></td>
+                </tr>
+                <tr>
+                    <td>东西方向网格个数</td>
+                    <td><input type="text" name="_lengthNum" value="10"></td>
+                </tr>
+                <tr>
+                    <td>南北方向网格个数</td>
+                    <td><input type="text" name="_widthNum" value="10"></td>
+                </tr>
+                <tr>
+                    <td>土壤层数</td>
+                    <td><input type="text" name="_depthNum" value="10"></td>
+                </tr>
+                <tr>
+                    <td>网格长（东西方向）</td>
+                    <td><input type="text" name="boxLength" value="10" disabled></td>
+                </tr>
+                <tr>
+                    <td>网格宽（南北方向）</td>
+                    <td><input type="text" name="boxWidth" value="10" disabled></td>
+                </tr>
+                <tr>
+                    <td>网格高（垂向方向）</td>
+                    <td><input type="text" name="boxHeight" value="10" disabled></td>
+                </tr>  
+            </table>
+            <div align="center">
+                <button class="cesium-button" id="vadoseCommit">确认</button>
+            </div>
+        </div>
+
+        <div id="gdwaterDiv" hidden>
+            <header class="cesium-cesiumInspector-button">
+                <p style="border-bottom: 1px solid #aaa ; padding-bottom: 3px;">潜水层网格属性面板</p>    
+            </header>
+            <table>
+               
+                <tr>
+                    <td>东西方向网格个数</td>
+                    <td><input type="text" name="_lengthNum" value="10"></td>
+                </tr>
+                <tr>
+                    <td>南北方向网格个数</td>
+                    <td><input type="text" name="_widthNum" value="10"></td>
+                </tr>
+                <tr>
+                    <td>网格长（东西方向）</td>
+                    <td><input type="text" name="boxLength" value="10" disabled></td>
+                </tr>
+                <tr>
+                    <td>网格宽（南北方向）</td>
+                    <td><input type="text" name="boxWidth" value="10" disabled></td>
+                </tr>
+                <tr>
+                    <td>网格高（垂向方向）</td>
+                    <td><input type="text" name="boxHeight" value="10" ></td>
+                </tr>  
+            </table>
+            <div align="center">
+                <button class="cesium-button" id="gdwaterCommit">确认</button>
+            </div>
+        </div>
+    </div>
+
+    
+    
+
+
+    <script src="../../js/loadingBox/globalName.js"></script>
+    <script src="../../js/loadingBox/boundingBox.js" type="module"></script>
+    <script src="../../js/loadingBox/cells.js" type="module"></script>
+
+</body>
+
+</html>

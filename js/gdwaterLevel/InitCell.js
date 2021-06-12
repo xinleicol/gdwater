@@ -24,8 +24,8 @@ class GdwaterLevelCell {
         this._cellX = dimensions.x
         this._cellY = dimensions.y
         this._cellDiagonal = Math.sqrt(Math.pow(this._cellX, 2) + Math.pow(this._cellY, 2))
-        this._rows = Cesium.defaultValue(this._rows, rows)
-        this._columns = Cesium.defaultValue(this._columns, columns)
+        this._rows = Cesium.defaultValue(rows, this._rows )
+        this._columns = Cesium.defaultValue(columns, this._columns)
         this._init()
     }
 

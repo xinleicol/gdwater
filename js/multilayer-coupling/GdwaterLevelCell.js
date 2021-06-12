@@ -24,8 +24,8 @@ class InitCell {
         this._cellX = dimensions.x
         this._cellY = dimensions.y
         this._cellDiagonal = Math.sqrt(Math.pow(this._cellX, 2) + Math.pow(this._cellY, 2))
-        this._rows = Cesium.defaultValue(this._rows, rows)
-        this._columns = Cesium.defaultValue(this._columns, columns)
+        this._rows = Cesium.defaultValue(rows,this._rows )
+        this._columns = Cesium.defaultValue(columns,this._columns)
         this._init()
     }
 
@@ -56,6 +56,8 @@ class InitCell {
                     'isTrailPloy': false, //当前元胞是否已经有流动线
                     'worldPosition': undefined, //元胞世界坐标
                     'modelPosition': undefined, //模型坐标
+                    'particlePool':[],
+                    'name':"gdwaterCell",
 
                 }
                 if (i == 0) {
@@ -92,12 +94,18 @@ class InitCell {
      * @param {行号} row 
      * @param {列号} col 
      * @param {污染物质量} value 
+     * @param {包气带元胞的深度} vadoseHeight 
      */
-    setPollutantMass(row, col, value) {
-        this.spreadArea[row][col].cellMass += value
-        if ((!this.spreadArea[row][col].isPolluted) & (this.spreadArea[row][col].cellMass > 0)) {
-            this.spreadArea[row][col].isPolluted = true
-            this.isPollutedArea.push(this.spreadArea[row][col])
+    setPollutantMass(row, col, value, vadoseHeight, centerCellOffset) {
+        if(!centerCellOffset) centerCellOffset = 0 ;
+        let rowChange = row + centerCellOffset;
+        let colChange = col + centerCellOffset;
+        this.spreadArea[rowChange][colChange].cellMass += value
+        if ((!this.spreadArea[rowChange][colChange].isPolluted) & (this.spreadArea[rowChange][colChange].cellMass > 0)) {
+            this.spreadArea[rowChange][colChange].isPolluted = true
+            this.isPollutedArea.push(this.spreadArea[rowChange][colChange])
+            this.spreadArea[rowChange][colChange].fatherNode = [row, col, vadoseHeight];
+            this.nextPollutedArea.push(this.spreadArea[rowChange][colChange]);
         }
     }
 
@@ -229,7 +237,7 @@ class InitCell {
         }
     }
 
-    // 污染物质量更新
+    // 污染物质量更新, 机械弥散
     updateCellMass() {
         let isPollutedArea = this.isPollutedArea
         isPollutedArea.forEach((element) => {
@@ -262,6 +270,8 @@ class InitCell {
                         if (!nextPollutedCell.isPolluted) {
                             nextPollutedCell.isPolluted = true
                             this.isPollutedArea.push(nextPollutedCell)
+                            this.nextPollutedArea.push(nextPollutedCell);
+                            nextPollutedCell.fatherNode = element.position;
                         }
                     })
                 }
@@ -346,6 +356,8 @@ class InitCell {
                         if (!element2.isPolluted) {
                             element2.isPolluted = true
                             this.isPollutedArea.push(element2)
+                            this.nextPollutedArea.push(element2);
+                            element2.fatherNode = element.position;
                         }
 
                         outMassDiffusionAll += outMassDiffusion
@@ -383,6 +395,8 @@ class InitCell {
                         if (!nextPollutedCell2.isPolluted) {
                             nextPollutedCell2.isPolluted = true
                             this.isPollutedArea.push(nextPollutedCell2)
+                            this.nextPollutedArea.push(nextPollutedCell2);
+                            nextPollutedCell2.fatherNode = element.position;
                         }
                     })
                 }

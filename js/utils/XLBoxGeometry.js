@@ -25,9 +25,11 @@ class XLBoxGeometry extends XLBox {
     })
     _boxEntities = new Cesium.EntityCollection() //盒子entities
     boxEntitiesStyle = {
-        material: Cesium.Color.AQUA.withAlpha(0.5),
+        material:  Cesium.Color.AZURE.withAlpha(0.1),//Cesium.Color.AQUA.withAlpha(0.5),
         outline: false,
         outlineColor: Cesium.Color.ALICEBLUE,
+        set showOutline(flag){this.outline = flag;},
+        set changeOutlineColor(color){this.outlineColor = color;} ,
     }
     constructor(centerPoint, dimensions, offsets) {
         super()
@@ -41,6 +43,7 @@ class XLBoxGeometry extends XLBox {
         addPolylineLightingTrailType() //添加光线
     }
 
+    showBoxOutline
     /**
      * 初始化模型矩阵和逆矩阵
      * @param {模型坐标原点的世界坐标} centerPosition 
@@ -50,7 +53,7 @@ class XLBoxGeometry extends XLBox {
     }
 
     /**
-     * 初始化网格模型位置
+     * 初始化网格模型位置,只能是奇数
      * @param {模型原点偏移位置} offset 
      * @param {x方向网格个数} xNum 
      * @param {y方向网格个数} yNum 
@@ -58,8 +61,8 @@ class XLBoxGeometry extends XLBox {
     initBoxPosition(offset, xNum, yNum) {
         this._centerOffset = offset
         let offsetFinal = Cesium.defaultValue(offset, new Cesium.Cartesian3())
-        let halfXNum = Math.floor(xNum)
-        let halfYNum = Math.floor(yNum)
+        let halfXNum = Math.floor(xNum/2)
+        let halfYNum = Math.floor(yNum/2)
         for (let i = -halfXNum; i < halfXNum + 1; i++) {
             for (let j = -halfYNum; j < halfYNum + 1; j++) {
                 let x = i * this._dimensions.x + offsetFinal.x
@@ -69,6 +72,35 @@ class XLBoxGeometry extends XLBox {
             }
         }
         return this._offsets
+    }
+
+    initBoxPositionUpdate(offset, xNum, yNum) {
+        this._centerOffset = offset
+        let offsetFinal = Cesium.defaultValue(offset, new Cesium.Cartesian3())
+        let halfXNum = Math.floor(xNum/2);
+        let halfYNum = Math.floor(yNum/2);
+        let xChangeValue = 0;
+        let yChangeValue = 0;
+        let xTop = halfXNum + 1;
+        let yTop = halfYNum + 1;
+        if (xNum % 2 === 0) {
+            xChangeValue = this._dimensions.x / 2 ;
+            xTop = halfXNum;
+        }
+        if (yNum % 2 === 0) {
+            yChangeValue = this._dimensions.y / 2 ;
+            yTop = halfYNum;
+        }
+        for (let i = -halfXNum; i < xTop; i++) {
+            for (let j = -halfYNum; j < yTop; j++) {
+                
+                let x = i * this._dimensions.x + xChangeValue + offsetFinal.x
+                let y = j * this._dimensions.y + yChangeValue + offsetFinal.y
+                let z = 0 + offsetFinal.z
+                this._offsets.push(new Cesium.Cartesian3(x, y, z))
+            }
+        }
+        
     }
 
     /**
@@ -96,7 +128,42 @@ class XLBoxGeometry extends XLBox {
         }
         return this._offsets
     }
-
+    
+    initBoxPosition3DUpdate(offset, xNum, yNum, zNum) {
+        this._centerOffset = offset
+        let offsetFinal = Cesium.defaultValue(offset, new Cesium.Cartesian3())
+        let halfXNum = Math.floor(xNum / 2)
+        let halfYNum = Math.floor(yNum / 2)
+        let halfZNum = Math.floor(zNum / 2)
+        let xChangeValue = 0;
+        let yChangeValue = 0;
+        let zChangeValue = 0;
+        let xTop = halfXNum + 1;
+        let yTop = halfYNum + 1;
+        let zTop = halfZNum + 1;
+        if (xNum % 2 === 0) {
+            xChangeValue = this._dimensions.x / 2 ;
+            xTop = halfXNum;
+        }
+        if (yNum % 2 === 0) {
+            yChangeValue = this._dimensions.y / 2 ;
+            yTop = halfYNum;
+        } 
+        if (zNum % 2 === 0) {
+            zChangeValue = this._dimensions.z / 2 ;
+            zTop = halfZNum;
+        }
+        for (let i = -halfXNum; i < xTop; i++) {
+            for (let j = -halfYNum; j < yTop; j++) {
+                for (let k = -halfZNum; k < zTop; k++) {
+                    let x = j * this._dimensions.x + xChangeValue+ offsetFinal.x //注意网格坐标的i是坐标系中的y
+                    let y = i * this._dimensions.y + yChangeValue+ offsetFinal.y
+                    let z = k * this._dimensions.z + zChangeValue + offsetFinal.z
+                    this._offsets.push(new Cesium.Cartesian3(x, y, z))
+                }
+            }
+        }
+    }
     /**
      * 生成盒子
      */
@@ -184,9 +251,11 @@ class XLBoxGeometry extends XLBox {
 
     //删除所有实体
     removeAllBoxsByEntities(){
-        this._boxEntities.values.forEach(element => {
-            viewer.entities.remove(element)
-        })
+        if (this._boxEntities.values.length > 0) {
+            this._boxEntities.values.forEach(element => {
+                viewer.entities.remove(element)
+            })
+        } 
     }
 
     //更改污染元胞颜色
