@@ -1,8 +1,19 @@
+import XLType from './XLType.js'
+
 /**顶层父类 */
 class XLBox{
     constructor(){
         this._modelMatrix = undefined
         this._worldToModel = undefined
+    }
+
+    get modelMatrix(){return this._modelMatrix}
+
+    get worldToModel(){return this._worldToModel}
+
+    // 初始化生成旋转和逆矩阵
+    initMatrix(centerPosition){
+        this.computerModelMatrixInverse(centerPosition)
     }
 
     computerModelMatrix(centerPosition){
@@ -12,15 +23,17 @@ class XLBox{
     }
 
     computerModelMatrixInverse(centerPosition){
-        this._modelMatrix = this.computerModelMatrix(centerPosition)
+        if (this._worldToModel) {
+            return this._worldToModel
+        }
+        if (!this._modelMatrix) {
+            this._modelMatrix = this.computerModelMatrix(centerPosition)
+        }
         this._worldToModel = this.inverseModelMatrix()
         return this._worldToModel
     }
 
-    inverseModelMatrix(modelMatrix){
-        if (modelMatrix) {
-            this._modelMatrix = modelMatrix
-        }
+    inverseModelMatrix(){
         this._worldToModel = Cesium.Matrix4.inverseTransformation( 
             this._modelMatrix,
             new Cesium.Matrix4()
@@ -52,8 +65,21 @@ class XLBox{
      * @param {模型原点坐标} centerPosition 
      */
     computerModelPositionFromCenter(worldPosition,centerPosition){
-        let worldToModel = this.computerModelMatrixInverse(centerPosition)
-        return this.computerModelPosition(worldPosition,worldToModel)
+        if(!this._worldToModel) this._worldToModel = this.computerModelMatrixInverse(centerPosition)
+        return this.computerModelPosition(worldPosition,this._worldToModel)
+    }
+
+    computerModelPositionFromCenterArrs(worldPositions,centerPosition){
+        XLType.determineArray(worldPositions)
+        let modelPositions = []
+        if (!this._worldToModel) {
+            this.computerModelMatrixInverse(centerPosition)
+        }
+        worldPositions.map(value => {
+            let modelPosition = this.computerModelPosition(value,this._worldToModel)
+            modelPositions.push(modelPosition)
+        })
+        return modelPositions
     }
 
     /**
@@ -62,8 +88,8 @@ class XLBox{
      * @param {模型原点世界坐标} centerPosition 
      */
     computerWorldPositionFromCenter(modelPosition,centerPosition){
-        let modelMatrix = this.computerModelMatrix(centerPosition)
-        return this.computerWorldPosition(modelPosition,modelMatrix)
+        if(!this._modelMatrix) this._modelMatrix = this.computerModelMatrix(centerPosition)
+        return this.computerWorldPosition(modelPosition,this._modelMatrix)
     }
 
     /**判定传进来的变量是cartesian3 */
@@ -86,6 +112,15 @@ class XLBox{
         return new Cesium.Cartesian3(longitude,latitude)
     }
 
+    cartesian3ToDegreesArr(arrs){
+        let results = [];
+        for (let i = 0; i < arrs.length; i++) {
+            const element = arrs[i];
+            results.push(this.cartesian3ToDegrees(element));
+        }
+        return results;
+    }
+
     /**
      * 经纬度转cartesian3
      * @param {经度} lon 
@@ -103,12 +138,48 @@ class XLBox{
 
     //获取地形高度
     getTerrainHeight(terrainProvider, positions){
-       return Cesium.sampleTerrainMostDetailed(terrainProvider, positions);
+        if (terrainProvider.availability){
+            return Cesium.sampleTerrainMostDetailed(terrainProvider, positions);
+        }else {
+            return positions
+        }
     }
 
     //弧度转笛卡尔坐标
     radiansToCartesian3(cartographic){
        return Cesium.Cartographic.toCartesian(cartographic, Cesium.Ellipsoid.WGS84, new Cesium.Cartesian3());
+    }
+
+    //弧度转经纬度
+    radiansToDegree(r1,r2){
+        let lon =Cesium.Math.toDegrees(r1)
+        let lat= Cesium.Math.toDegrees(r2)
+        return [lon,lat]
+    }
+
+    radiansToDegreeArrs(arrs){
+        let results = []
+        for (const iterator of arrs) {
+            let r =  Cesium.Math.toDegrees(iterator)
+            results.push(r)
+        }
+        return results
+       
+    }
+
+    //计算cartesian3直线距离
+    distanceFromCartesian3(car1,car2){
+        return Cesium.Cartesian3.distance(car1, car2);
+    }
+
+    //经纬度批量转cartesian3
+    degreeToCartesian3Arrs(arrs){
+        let results = [];
+        for (let i = 0; i < arrs.length; i++) {
+            const element = arrs[i];
+            results.push(this.degreeToCartesian3(...element));
+        }
+        return results;
     }
 
 }

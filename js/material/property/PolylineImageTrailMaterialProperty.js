@@ -1,7 +1,4 @@
-/**
- * @Author: Caven
- * @Date: 2020-07-17 22:15:56
- */
+
 
 import MaterialProperty from './MaterialProperty.js'
 

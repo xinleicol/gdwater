@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>cesium openlayers coupling</title>
+
+    <link href="../../CesiumUnminified/Widgets/widgets.css" rel="stylesheet">
+    <script src="../../CesiumUnminified/Cesium.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.5.0/build/ol.js"></script>
+
+    <style>
+        @import url(../../css/bucket.css);
+
+        .openlayers-container {
+            background: rgba(42, 42, 42, 0.8);
+            margin: 4px;
+            border-radius: 4px;
+            border-radius: 5px;
+            position: absolute;
+            bottom: 0px;
+        }
+
+        .map {
+            border-width: 1px;
+            height: 255px;
+            width: 300px;
+        }
+
+        .openlayers-container>h2 {
+            color: white;
+            display: inline-block;
+            font-weight: 400;
+            margin: 4px 2px;
+        }
+
+        .openlayers-container .position-label {
+            text-align: end;
+            display: inline-block;
+
+        }
+
+        .openlayers-container #nodelist {
+            height: 89px;
+            margin: 1px;
+        }
+
+        .openlayers-container #nodelist iframe {
+            border: none;
+            padding: 0px;
+            margin: 2px 0px;
+            background-color: #fff;
+        }
+    </style>
+
+</head>
+
+<body>
+
+    <div id="cesiumContainer" class="fullSize">
+    </div>
+    <div class="openlayers-container">
+        <h2>地形</h2>
+        <div id="clickedPosition" class="position-label"></div>
+        <button onclick="test()">测试</button>
+        <div id="nodelist"></div>
+        <div id="map" class="map"></div>
+    </div>
+
+    <script src="../../js/openlayers/cesium-openlayers.js"></script>
+</body>
+
+</html>

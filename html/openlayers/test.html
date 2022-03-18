@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.5.0/css/ol.css" type="text/css">
+    <style>
+        .map {
+            height: 400px;
+            width: 100%;
+            border: 1px;
+            border-style: solid;
+        }
+
+        .info {
+            width: 500px;
+            height: 30px;
+            border: 1px;
+            border-style: solid;
+            border-color: black;
+            margin: 5px;
+        }
+
+        .location {
+            margin-left: 800px;
+        }
+
+        #nodelist iframe {
+            border: none;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.5.0/build/ol.js"></script>
+    <title>OpenLayers example</title>
+</head>
+
+<body>
+    <h2>My Map</h2>
+    <div id="map" class="map"></div>
+    <div id="info" class="info"></div>
+    <div id="position" class="info"></div>
+    <div id="location" class="location"></div>
+    <div id="screen" class="location"></div>
+    <div id="nodelist"></div>
+    <!-- //跨域配置 -->
+
+    <script type="text/javascript">
+        var aerial = new ol.source.XYZ({
+            url: "http://localhost:5500/resource/hhu_img2/{z}/{x}/{y}.png",
+            maxZoom: 20,
+        });
+        var demo = new ol.layer.Tile({
+            source: aerial,
+        });
+
+
+        var imagery = new ol.layer.Image({
+            source: new ol.source.ImageWMS({
+                ratio: 1,
+                url: 'http://localhost:8089/geoserver/water/wms',
+                params: {
+                    'FORMAT': 'image/jpeg', //'image/jpeg',//
+                    'VERSION': '1.1.1',
+                    "STYLES": '',
+                    "LAYERS": 'water:gdwater',
+                    "exceptions": 'application/vnd.ogc.se_inimage',
+                },
+                crossOrigin: ''
+            })
+        });
+
+        var container = document.getElementById('map');
+        var info = document.getElementById("info");
+        var position = document.getElementById("position");
+        var screen = document.getElementById("screen");
+
+        var mousePosition = null;
+        container.addEventListener('click', function (event) {
+            mousePosition = map.getEventPixel(event);
+            var p = map.getEventCoordinate(event);
+            // p = ol.proj.transform(p, 'EPSG:3857', 'EPSG:4326');
+            position.innerText = p;
+            screen.innerText = map.getPixelFromCoordinate(p);
+            map.render();
+        });
+
+        imagery.on('postrender', function (event) {
+            var ctx = event.context;
+            var pixelRatio = event.frameState.pixelRatio;
+            if (mousePosition) {
+                var x = mousePosition[0] * pixelRatio;
+                var y = mousePosition[1] * pixelRatio;
+                var data = ctx.getImageData(x, y, 1, 1).data;
+                info.innerText = data[0] + "-" + data[1] + "-" + data[2];
+            }
+        });
+
+        //开启坐标控件
+        var mousePositionControl = new ol.control.MousePosition({
+            className: 'custom-mouse-position',
+            target: document.getElementById('location'),
+            coordinateFormat: ol.coordinate.createStringXY(5),
+            undefinedHTML: '&nbsp;',
+            projection: new ol.proj.Projection({
+                code: "EPSG:4326"
+            })
+        });
+
+        var projection = new ol.proj.Projection({
+            code: 'EPSG:3857',
+            units: 'm',
+            // global: true
+        });
+
+        var map = new ol.Map({
+            controls: ol.control.defaults({
+                attribution: false
+            }).extend([mousePositionControl]),
+            target: container,
+            layers: [
+                imagery
+            ],
+            view: new ol.View({
+                projection: projection,
+                //center: ol.proj.fromLonLat([118.78, 31.91]),
+                //zoom: 15
+            }),
+
+        });
+
+        // var bounds = [13221771.404656487, 3750917.8520101234,
+        //     13224217.389561612, 3753363.836915249
+        // ];
+        var bounds = [118.624326, 31.850880000000004, 119.06480119199999, 32.180577]
+        map.getView().fit(bounds, map.getSize());
+
+        //获取像素值
+        map.on('singleclick', function (evt) {
+            document.getElementById('nodelist').innerHTML = "Loading... please wait...";
+            var view = map.getView();
+            var viewResolution = view.getResolution();
+            var source = imagery.getSource();
+            var url = source.getFeatureInfoUrl(
+                evt.coordinate, viewResolution, view.getProjection(), {
+                    'INFO_FORMAT': 'text/html', //'application/json',//
+                    'FEATURE_COUNT': 50
+                });
+            // var xhr = new XMLHttpRequest();
+            // xhr.open('GET',url);
+            // xhr.send();
+            // xhr.onload = function(){
+            //     let imgInfo = xhr.responseText;
+            //     let jsonFormat = JSON.parse(imgInfo)
+            //     if (jsonFormat.features.length > 0) {  
+            //         let gridValue = jsonFormat.features[0].properties.GRAY_INDEX;
+            //         console.log(gridValue);
+            //         document.getElementById('nodelist').innerHTML = gridValue;
+            //     }
+            // }
+
+            if (url) {
+                document.getElementById('nodelist').innerHTML = '<iframe id="test" seamless src="' + url +
+                    '"></iframe>';
+            }
+        });
+
+        function a(){
+                let b = 1
+                let c = [1,2,3]
+                c.forEach(v => {
+                    b += 1
+                })
+                console.log(b);
+        }
+            a()
+
+
+        //修改查询值的标题样式
+    </script>
+</body>
+
+</html>

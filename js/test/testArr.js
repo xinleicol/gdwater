@@ -40,12 +40,15 @@
 
 // test()
 
-for (let i = 0; i < 3; ++i) {
-    console.log(i);
-    if (i>=2) {
-        continue
-    }
-    console.log("1111");
+function test1(b = 1){
+    let a = [1,2,3]
+    Object.defineProperty(a, 'state',{
+        value: true,
+        writable:true
+    })
+    console.log(a.state);
+    console.log(b);
 }
+test1(2)
 
   

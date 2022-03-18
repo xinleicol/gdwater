@@ -47,13 +47,15 @@ class XLPosition extends XLBox{
         Cesium.defaultValue(this._offset,new Cesium.Cartesian3())
         let modelPosition = new Cesium.Cartesian3()
         
-        let gridCoor = new Cesium.Cartesian3 ( girdPosition[1] , girdPosition[0],0 ) //y x坐标不要搞混
-        let transform = new Cesium.Cartesian3(1,-1,1)
-        let translation = new Cesium.Cartesian3(-this._halfGridX,this._halfGridY, 0)
+        //let gridCoor = new Cesium.Cartesian3 ( girdPosition[1] , girdPosition[0],0 ) //y x坐标不要搞混
+        let gridCoor = new Cesium.Cartesian3 ( girdPosition[0] , girdPosition[1],0 ) //y x坐标不要搞混
+        let transform = new Cesium.Cartesian3(1,1,1)
+        let translation = new Cesium.Cartesian3(-this._halfGridX,-this._halfGridY, 0)
         if (girdPosition.length == 3) { //三维元胞模型时
-            gridCoor = new Cesium.Cartesian3(girdPosition[1] , girdPosition[0], girdPosition[2] )
-            transform = new Cesium.Cartesian3(1,-1,-1)
-            translation = new Cesium.Cartesian3(-this._halfGridX,this._halfGridY, this._halfGridZ)
+            //gridCoor = new Cesium.Cartesian3(girdPosition[1] , girdPosition[0], girdPosition[2] )
+            gridCoor = new Cesium.Cartesian3(girdPosition[0] , girdPosition[1], girdPosition[2] )
+            transform = new Cesium.Cartesian3(1,1,-1)
+            translation = new Cesium.Cartesian3(-this._halfGridX,-this._halfGridY, this._halfGridZ)
         }
         Cesium.Cartesian3.multiplyComponents (gridCoor, transform, modelPosition) 
         Cesium.Cartesian3.add (modelPosition, translation, modelPosition)
@@ -125,6 +127,9 @@ class XLPosition extends XLBox{
         let z = -position[2]+this._heights
         return [position[0],position[1],z]
     }
+
+
+    
 
 }
 

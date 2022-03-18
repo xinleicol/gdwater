@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <!-- <script src="../../CesiumUnminified/Cesium.js"></script> -->
+    <script src="https://cesium.com/downloads/cesiumjs/releases/1.87.1/Build/Cesium/Cesium.js"></script>
+    <link rel="stylesheet" href="../../CesiumUnminified/Widgets/widgets.css">
+    <link rel="stylesheet" href="../../css/bucket.css">
+    <script src="../../js/source/cesium.widget.min.js"></script>
+    <link rel="stylesheet" href="../../css/cesium.widget.min.css">
+    <script src="../../js/source/jquery-3.6.0.min.js"></script>
+</head>
+
+<body>
+    <div id="cesiumContainer" class="fullSize"></div>
+    <div style="display: block; top: 10px; width: 100px; height: 70px; position: absolute;">
+        <button id="test" style=" display: inline-block; width: 50px;height: 30px; background-color: #fff;">点我</button>
+        <button id="test2" style="display: inline-block; width: 50px;height: 30px; background-color: #fff;">矩形</button>
+        <button id="test3" style="display: inline-block; width: 50px;height: 30px; background-color: #fff;">颜色</button>
+        <button id="test4" style="display: inline-block; width: 50px;height: 30px; background-color: #fff;">切片</button>
+        <button id="test5" style="display: inline-block; width: 50px;height: 30px; background-color: #fff;">土壤</button>
+        <button id="test6" style="display: inline-block; width: 50px;height: 30px; background-color: #fff;">多次</button>
+        <button id="test7" style="display: inline-block; width: 50px;height: 30px; background-color: #fff;">栅格</button>
+        <button id="test8" style="display: inline-block; width: 50px;height: 30px; background-color: #fff;">获取</button>
+        <button id="test9" style="display: inline-block; width: 50px;height: 30px; background-color: #fff;">潜水</button>
+        <button id="test10" style="display: inline-block; width: 50px;height: 30px; background-color: #fff;">潜算</button>
+        <button id="test11" style="display: inline-block; width: 50px;height: 30px; background-color: #fff;">多次</button>
+        <button id="test12" style="display: inline-block; width: 50px;height: 30px; background-color: #fff;">加点</button>
+        <button id="test13" style="display: inline-block; width: 50px;height: 30px; background-color: #fff;">飞行</button>
+        
+    </div>
+    <script>
+        var tianditu = new Cesium.UrlTemplateImageryProvider({
+            url: "https://t{s}.tianditu.gov.cn/DataServer?T=img_w&x={x}&y={y}&l={z}&tk=4d59f4ef142725ef8c409801fc86be8b",
+            subdomains: ['0', '1', '2', '3', '4', '5', '6', '7'],
+            tilingScheme: new Cesium.WebMercatorTilingScheme(),
+            maximumLevel: 18,
+        });
+        var viewer = new Cesium.Viewer('cesiumContainer', {
+            imageryProvider: undefined,
+            terrainProvider: undefined,//Cesium.createWorldTerrain(),
+            baseLayerPicker: false,
+            shouldAnimate: false,
+            animation: false,
+            timeline: false,
+        });
+        viewer.extend(Cesium.CesiumWidgetMixin)
+    </script>
+    <script type="module" src="./testDraw.js"></script>
+</body>
+
+</html>

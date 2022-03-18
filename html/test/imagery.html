@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script src="../../CesiumUnminified/Cesium.js"></script>
+    <link rel="stylesheet" href="../../css/bootstrap.min.css">
+    <link rel="stylesheet" href="../../CesiumUnminified/Widgets/widgets.css">
+    <link rel="stylesheet" href="../../css/bucket.css">
+</head>
+
+<body>
+    <div id="cesiumContainer" class="fullSize"></div>
+    <div></div>
+    <script>
+        var tianditu = new Cesium.UrlTemplateImageryProvider({
+            url: "https://t{s}.tianditu.gov.cn/DataServer?T=img_w&x={x}&y={y}&l={z}&tk=4d59f4ef142725ef8c409801fc86be8b",
+            subdomains: ['0', '1', '2', '3', '4', '5', '6', '7'],
+            tilingScheme: new Cesium.WebMercatorTilingScheme(),
+            maximumLevel: 18,
+        });
+        var viewer = new Cesium.Viewer('cesiumContainer', {
+            imageryProvider: tianditu,
+            terrainProvider: null,
+            baseLayerPicker: false,
+            shouldAnimate: false,
+            animation: false,
+            timeline: false,
+        });
+        var bounds = [118.774051666258, 31.9099131583018, 118.791560791431, 31.9215700159321]
+        var rectangle = Cesium.Rectangle.fromDegrees(bounds[0], bounds[1], bounds[2], bounds[3]);
+        var layers = viewer.scene.imageryLayers;
+        var scene = viewer.scene;
+        var provider = new Cesium.WebMapServiceImageryProvider({
+            url: 'http://localhost:8999/geoserver/dem/wms',
+            layers: 'dem:hhu_dem',
+            rectangle: rectangle,
+        });
+        //var demlayers = layers.addImageryProvider(provider);
+
+        var njCityTiles = new Cesium.Cesium3DTileset({
+            url: 'http://localhost:5500/resource/nj_building_tiles/tileset.json',
+        });
+
+        //河海建筑物数据
+        var hhuCitTiles = new Cesium.Cesium3DTileset({
+            url: 'http://localhost:5500/resource/hhu_building_tiles/tileset.json',
+        });
+        var hhuCity = scene.primitives.add(njCityTiles);
+
+        var transparentStyle = new Cesium.Cesium3DTileStyle({
+            color: "color('white', 0.3)",
+            show: true
+        });
+        var idStyle = new Cesium.Cesium3DTileStyle({
+            color: {
+                conditions: [
+                    ["Number(${id}) >= 200000", "rgba(45, 0, 75, 0.5)"],
+                    ["Number(${id}) >= 150000", "rgb(170, 162, 204)"],
+                    ["Number(${id}) >= 100000", "rgb(252, 230, 200)"],
+                    ["Number(${id}) >= 50000", "rgb(248, 176, 87)"],
+                    ["true", "rgb(127, 59, 8)"]
+                ]
+            }
+        });
+        var heightStyle = new Cesium.Cesium3DTileStyle({
+            color: {
+                conditions: [
+                    ["Number(${Floor} )>= 15", "rgba(45, 0, 75, 0.5)"],
+                    ["Number(${Floor}) >= 11", "rgb(102, 71, 151)"],
+                    ["Number(${Floor}) >= 7", "rgb(224, 226, 238)"],
+                    ["Number(${Floor}) >= 3", "rgb(198, 106, 11)"],
+                    ["true", "rgb(127, 59, 8)"]
+                ]
+            }
+        });
+        hhuCity.style = heightStyle;
+        viewer.camera.setView({
+            destination: Cesium.Cartesian3.fromDegrees(118.781, 31.915, 10000.0)
+        });
+
+        //获取属性名
+        function addListener() {
+            var handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+            handler.setInputAction(function (click) {
+                var pickedFeature = viewer.scene.pick(click.position)
+                if (pickedFeature) {
+                    getAllProperty(pickedFeature)
+                }
+            }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+        }
+
+        function getAllProperty(feature) {
+            var propertyNames = feature.getPropertyNames()
+            var length = propertyNames.length
+            for (var i = 0; i < length; ++i) {
+                var propertyName = propertyNames[i]
+                console.log(propertyName + ': ' + feature.getProperty(propertyName))
+            }
+        }
+        addListener();
+
+        viewer.entities.add({
+            position:Cesium.Cartesian3.fromDegrees(118.78, 31.91, 0),
+            box:{
+                dimensions:new Cesium.Cartesian3(50,50,150),
+                material: Cesium.Color.RED
+            }
+        })
+        var globe = viewer.scene.globe;
+        globe.translucency.enabled = true;
+        globe.translucency.frontFaceAlpha = 0.5 ;
+        scene.screenSpaceCameraController.enableCollisionDetection = false;
+    </script>
+</body>
+
+</html>

@@ -83,6 +83,59 @@ class XLType{
         return flag;
     }
        
+    static merge(dest, ...sources) {
+        let i, j, len, src
+        for (j = 0, len = sources.length; j < len; j++) {
+          src = sources[j]
+          for (i in src) {
+            dest[i] = src[i]
+          }
+        }
+        return dest
+      }
+
+      static isCartesian3(p){
+          if ('z' in p) {
+              return true
+          }else{
+              return false
+          }
+      }
+
+      static numberToArrs(recs){
+        if (!Array.isArray(recs)) {
+            let recss = new Array()
+            recss.push(recs)
+            return recss
+        }else{
+            return recs            
+        }
+      }
+
+
+      static isCesiumColor(c){
+          if (c.red) {
+              return true
+          }else{
+              return false
+          }
+      }
+
+      static isRectangleDao(r){
+          if (r.type == 'RectangleDao') {
+              return true
+          }else{
+              return false
+          }
+      }
+
+      //提取数组中的一个值重新组成一个数组
+      static extractArrs(arrs, value){
+        let result = arrs.map(item => {
+            return item[value]
+        })
+        return result
+      }
     
 }    
 

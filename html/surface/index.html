@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script src="../../CesiumUnminified/Cesium.js"></script>
+    <!-- <script src="https://cesium.com/downloads/cesiumjs/releases/1.89/Build/Cesium/Cesium.js"></script> -->
+    <link rel="stylesheet" href="../../CesiumUnminified/Widgets/widgets.css">
+    <link rel="stylesheet" href="../../css/bucket.css">
+    <script src="../../js/source/jquery-3.6.0.min.js"></script>
+    <style>
+        .xl-bac {
+            position: relative;
+            display: inline-block;
+            align-items: center;
+            background: #303336;
+            border-radius: 4px;
+            padding: 5px 12px;
+            margin: 2px 3px;
+            border: 1px solid #444;
+            color: #edffff;
+            fill: #edffff;
+            cursor: pointer;
+        }
+
+        .xl-bac input {
+            display: inline-block;
+            vertical-align: middle;
+            border-radius: 4px;
+        }
+        .xl-bac span{
+            margin: 4px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="cesiumContainer" class="fullSize"></div>
+    <div class="toolbar">
+        <div class="cesium-button" id="set-view">Set view</div>
+        <div class="cesium-button" id="reset">Reset</div><br>
+        <div class="cesium-button" id="init">Init</div>
+        <div class="cesium-button" id="simulate">Simulate</div>
+        <div class="cesium-button" id="time">0 min</div><br>
+    
+        <div>
+            <div class="xl-bac" >
+                <span>Rain (mm/h)</span>
+                <input type="text" value="35" id="rain-text" size="1">
+                <span>Rain time(h)</span>
+                <input type="text" value="0.2" id="rain-time-text" size="1">
+                <span>Rain out(mm/h)</span>
+                <input type="text" value="30" id="rain-out-text" size="1">
+            </div>
+            <button class="cesium-button" id="set-rain-param">Confirm</button>
+        </div>
+       
+        
+        <div>
+            <div class="xl-bac" >
+                <span>Time (min)</span>
+                <input type="range" max="24" min="0.1" step="0.1" value="5" id="time-range">
+                <input type="text" value="5" size="1" id="time-text">
+            </div>
+            <button class="cesium-button" id="simulate-with-time">Simulate with time</button>
+        </div>
+
+        <div>
+            <div class="xl-bac" >
+                <span>Number</span>
+                <input type="range" max="10" min="1" step="1" value="5" id="number-range">
+                <input type="text" value="5" size="1" id="number-text">
+            </div>
+            <button class="cesium-button" id="simulate-with-number">Simulate with number</button>
+        </div>
+        <div class="cesium-button" id="rectangle-division">
+            <input type="checkbox">
+            Rectangle division
+        </div><br>
+        <div class="cesium-button" id="show-terrain">
+            <input type="checkbox" name="" id="" checked>
+            Terrain
+        </div><br>
+    
+        <div>
+            <div class="xl-bac" >
+                <span>Time (min)</span>
+                <input type="range" max="60" min="1" step="1" value="5" id="rain-time-time-range">
+                <input type="text" value="5" size="1" id="rain-time-time-text">
+            </div>
+            <button class="cesium-button" id="rain-time-time">Rain with time by time</button>
+        </div>
+        <div>
+            <div class="xl-bac" >
+                <span>Step(number)</span>
+                <input type="range" max="30" min="1" step="1" value="10" id="step-range">
+                <input type="text" value="10" size="1" id="step-text">
+            </div>
+            <button class="cesium-button" id="step-cli">Simulate by step</button>
+        </div>
+
+        <div class="cesium-button" id="random-color">Random color</div>
+    </div>
+    <script>
+        var guge = new Cesium.UrlTemplateImageryProvider({
+            url: 'http:localhost:5500/proxy/maps/vt?lyrs=s@800&x={x}&y={y}&z={z}', //'http://www.google.cn/maps/vt?lyrs=s@800&x={x}&y={y}&z={z}',
+            tilingScheme: new Cesium.WebMercatorTilingScheme(),
+            minimumLevel: 1,
+            maximumLevel: 20
+        });
+        var nj_dem = new Cesium.CesiumTerrainProvider({
+            url: "http://127.0.0.1:5500/resource/nj_dem",
+            requestVertexNormals: true
+        });
+        var tianditu = new Cesium.UrlTemplateImageryProvider({
+            url: "https://t{s}.tianditu.gov.cn/DataServer?T=img_w&x={x}&y={y}&l={z}&tk=4d59f4ef142725ef8c409801fc86be8b",
+            subdomains: ['0', '1', '2', '3', '4', '5', '6', '7'],
+            tilingScheme: new Cesium.WebMercatorTilingScheme(),
+            maximumLevel: 18,
+        });
+        Cesium.Ion.defaultAccessToken =
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJhNTg4YmQ0ZC0xNzcyLTRlNDItYjZkMi0zNzc0ODI3N2E2ZjciLCJpZCI6MzI1MjYsImlhdCI6MTYyMjYyMjQxOX0.kUki8CUFlPiIiuwlqIb7TGWmhk6hnlY6gwYViX08tDc';
+        const bingMap = new Cesium.IonImageryProvider({
+            assetId: 2
+        })
+
+        var viewer = new Cesium.Viewer('cesiumContainer', {
+            imageryProvider: bingMap,
+            terrainProvider: undefined, //Cesium.createWorldTerrain(),//nj_dem, //
+            baseLayerPicker: true,
+            shouldAnimate: false,
+            animation: false,
+            timeline: false,
+        });
+        viewer._cesiumWidget._creditContainer.style.display = "none";
+    </script>
+    <script type="module" src="../../js/surface/index.js"></script>
+</body>
+
+</html>

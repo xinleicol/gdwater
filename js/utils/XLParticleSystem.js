@@ -598,7 +598,7 @@ function updateBillboard(system, Particle) {//更新粒子图片大小、颜色�
     Particle.endColor.alpha,
     Particle.normalizedAge
   );
-  billboard.Color = new Cesium.Color(r, g, b, a);
+  billboard.color = new Cesium.Color(r, g, b, a);
 
   // Update the scale
   billboard.scale = Cesium.Math.lerp(

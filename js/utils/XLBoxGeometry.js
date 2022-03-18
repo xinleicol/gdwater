@@ -12,7 +12,7 @@ class XLBoxGeometry extends XLBox {
     _offsets = []
 
     _TrailPloyLineColor = undefined //箭头颜色
-    trailPloys = [] //存放已经生成的流动线实体
+    trailPloys = new Cesium.EntityCollection() //存放已经生成的流动线实体
     lightingTrailPloys = [] //发光流动线
     geometry = undefined //盒子样式
     _boxPrimitives = new Cesium.PrimitiveCollection() //盒子的primitive实体集合
@@ -26,10 +26,14 @@ class XLBoxGeometry extends XLBox {
     _boxEntities = new Cesium.EntityCollection() //盒子entities
     boxEntitiesStyle = {
         material:  Cesium.Color.AZURE.withAlpha(0.1),//Cesium.Color.AQUA.withAlpha(0.5),
+        fill:true,
         outline: false,
-        outlineColor: Cesium.Color.ALICEBLUE,
+        outlineColor: Cesium.Color.AZURE,
+        get showOutline(){return this.outline},
         set showOutline(flag){this.outline = flag;},
+        get changeOutlineColor(){return this,this.outlineColor},
         set changeOutlineColor(color){this.outlineColor = color;} ,
+        isID: true //是否给实体添加id属性，为了避免id重复，暂时这样写
     }
     constructor(centerPoint, dimensions, offsets) {
         super()
@@ -42,8 +46,6 @@ class XLBoxGeometry extends XLBox {
         addPolylineImageTrailType() //添加流动线材质
         addPolylineLightingTrailType() //添加光线
     }
-
-    showBoxOutline
     /**
      * 初始化模型矩阵和逆矩阵
      * @param {模型坐标原点的世界坐标} centerPosition 
@@ -65,8 +67,8 @@ class XLBoxGeometry extends XLBox {
         let halfYNum = Math.floor(yNum/2)
         for (let i = -halfXNum; i < halfXNum + 1; i++) {
             for (let j = -halfYNum; j < halfYNum + 1; j++) {
-                let x = i * this._dimensions.x + offsetFinal.x
-                let y = j * this._dimensions.y + offsetFinal.y
+                let x = j * this._dimensions.x + offsetFinal.x
+                let y = i * this._dimensions.y + offsetFinal.y
                 let z = 0 + offsetFinal.z
                 this._offsets.push(new Cesium.Cartesian3(x, y, z))
             }
@@ -97,7 +99,10 @@ class XLBoxGeometry extends XLBox {
                 let x = i * this._dimensions.x + xChangeValue + offsetFinal.x
                 let y = j * this._dimensions.y + yChangeValue + offsetFinal.y
                 let z = 0 + offsetFinal.z
-                this._offsets.push(new Cesium.Cartesian3(x, y, z))
+                this._offsets.push({
+                    position:[i+halfXNum, j+halfYNum], //和元胞挂钩
+                    modelPosition:new Cesium.Cartesian3(x, y,z)
+                })
             }
         }
         
@@ -156,10 +161,13 @@ class XLBoxGeometry extends XLBox {
         for (let i = -halfXNum; i < xTop; i++) {
             for (let j = -halfYNum; j < yTop; j++) {
                 for (let k = -halfZNum; k < zTop; k++) {
-                    let x = j * this._dimensions.x + xChangeValue+ offsetFinal.x //注意网格坐标的i是坐标系中的y
-                    let y = i * this._dimensions.y + yChangeValue+ offsetFinal.y
+                    let x = i * this._dimensions.x + xChangeValue+ offsetFinal.x 
+                    let y = j * this._dimensions.y + yChangeValue+ offsetFinal.y
                     let z = k * this._dimensions.z + zChangeValue + offsetFinal.z
-                    this._offsets.push(new Cesium.Cartesian3(x, y, z))
+                    this._offsets.push({
+                        position:[i+halfXNum, j+halfYNum, halfZNum-k], //和元胞挂钩
+                        modelPosition:new Cesium.Cartesian3(x, y, z)
+                    })
                 }
             }
         }
@@ -216,19 +224,20 @@ class XLBoxGeometry extends XLBox {
     }
 
     //生成实体通过viewer.entities的方式
-    generateByEntities() {
+    //type 网格id类型
+    generateByEntities(type) {
         if (this._offsets.length == 0) {
             throw new Error('请传入一个非空的偏移坐标...')
         }
 
         //这样子就只需生成一次，节省性能
-        if (this._boxEntities.values.length != 0) {
+        if (this._boxEntities.values.length > 0) {
             this._boxEntities.show = true
             return
         }
 
         for (const offset of this._offsets) {
-            let worldPosition = this.computerWorldPosition(offset,this._modelMatrix)
+            let worldPosition = this.computerWorldPosition(offset.modelPosition,this._modelMatrix)
            
             let box = viewer.entities.add({
                 position: worldPosition,
@@ -236,17 +245,29 @@ class XLBoxGeometry extends XLBox {
                     dimensions: this._dimensions,
                     ...this.boxEntitiesStyle
                 },
-                id: offset.toString()
+                id: type?type + offset.position.toString():offset.position.toString(),
             });
             this._boxEntities.add(box)
         }
-        viewer.entities.add(this._boxEntities)
+        //viewer.entities.add(this._boxEntities)
         this._boxEntities.show = true 
     }
 
     //隐藏实体
     hideAllBoxsByEntities(){
         this._boxEntities.show = false 
+    }
+
+    showOrHidden(){
+        this._boxEntities.show =  !this._boxEntities.show
+    }
+
+    isShowEntity(f){
+        this._boxEntities.show = f;
+    }
+    // 流动线生成是否
+    isShowTrail(f){
+        this.trailPloys.show = f;
     }
 
     //删除所有实体
@@ -260,11 +281,12 @@ class XLBoxGeometry extends XLBox {
 
     //更改污染元胞颜色
     getAndSetBoxEntites(id,currentColor){
-        XLType.determineCartesian3(id)
+        // XLType.determineCartesian3(id)
         Cesium.Check.typeOf.object('currentColor',currentColor)
         let boxEntity = this._boxEntities.getById (id.toString())
         if (boxEntity) {
             boxEntity.box.material = currentColor
+            boxEntity.box.show = true
         }
     }
 
@@ -293,31 +315,39 @@ class XLBoxGeometry extends XLBox {
         })
     }
 
+    //是否填充
+    isFilled(value){
+        this._boxEntities.values.forEach((element)=>{
+            element.box.fill = value
+        })
+    }
+
     /**
      * 生成流动线
      * @param {起点} startPosition 
      * @param {终点} endPosition 
      */
-    generateTrailPloyline(startPosition, endPosition) {
+    generateTrailPloyline(positions) {
         let color = Cesium.defaultValue(this._TrailPloyLineColor, Cesium.Color.DEEPSKYBLUE)
+
         let trailPloyline = viewer.entities.add({
             name: 'PolylineTrail',
             polyline: {
-                positions: [startPosition, endPosition],
+                positions: positions,
                 width: 10,
                 material: new PolylineImageTrailMaterialProperty({
                     color: color,
-                    speed: 20,
+                    speed: 10,
                     image: '../../image/arrow.png',
                     repeat: {
-                        x: 4,
+                        x: 1,
                         y: 1
                     }
                 }),
             }
         });
-        this.trailPloys.push(trailPloyline)
-
+        this.trailPloys.add(trailPloyline);
+        return this.trailPloyline;
     }
 
     /**
@@ -375,6 +405,29 @@ class XLBoxGeometry extends XLBox {
         });
     }
 
+    lookAt(x,y,z){
+        const camera = viewer.scene.camera;
+        camera.lookAt(this._centerPoint, new Cesium.Cartesian3(x,y,z));
+    }
+
+    styleOne(){
+        this.boxEntitiesStyle = {
+            fill:false,
+            outline: true,
+            outlineColor: Cesium.Color.AQUA,
+            isID: true 
+        }
+    }
+
+    // 绘制坐标轴
+    drawAxis(){
+        viewer.scene.primitives.add(new Cesium.DebugModelMatrixPrimitive({
+            modelMatrix: this.modelMatrix,
+            length: 1000.0,
+            width: 2.0
+        }));
+    }
+       
 }
 
 export default XLBoxGeometry

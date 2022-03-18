@@ -1,40 +1,51 @@
-import XLBoundingBox from '../utils/computerBox/XLBoundingBox.js'
-import XLGdwaterBox from '../utils/computerBox/XLGdwaterBox.js';
-import XLSurfaceBox from '../utils/computerBox/XLSurfaceBox.js';
-import XLVadoseBox from '../utils/computerBox/XLVadoseBox.js';
+import XLBoundingBox from '../utils/computer/XLBoundingBox.js'
+import XLGdwaterBox from '../utils/computer/XLGdwaterBox.js';
+import XLSurfaceBox from '../utils/computer/XLSurfaceBox.js';
+import XLVadoseBox from '../utils/computer/XLVadoseBox.js';
+import RectangleClip from '../utils/dispose/RectangleClip.js';
 import XLInteract from '../utils/XLInteract.js';
 
 
 
-// var lon1 = 118.774051666259766;
-// var lat1 = 31.909913158302139;
-// var lon2 = 118.791561126708984;
-// var lat2 = 31.921570015932399;
-var lon1 = 118.774051666258;
-var lat1 = 31.9099131583018;
-var lon2 = 118.791560791431;
-var lat2 = 31.9215700159321;
-var imageLocation = [lon1, lon2, lat1, lat2];
+// var lon1 = 118.764051666259766;
+// var lat1 = 31.899913158302139;
+// var lon2 = 118.801561126708984;
+// var lat2 = 31.931570015932399;
+let lon1 = 118.774051666258;
+let lat1 = 31.9099131583018;
+let lon2 = 118.791560791431;
+let lat2 = 31.9215700159321;
+let imageLocation = [lon1, lon2, lat1, lat2];
 
-var surfaceLengthNum = 10; //地表网格长个数
-var surfaceWidthNumSurface = 10 ; //地表网格宽个数
-var vadoseLengthNum = 10 ; // 土壤网格长个数
-var vadoseWidthNum = 10 ; //土壤网格宽个数
-var vadoseHeigthNum = 10; //土壤层数
-var vadoseDepth = 200 ; //土壤深度 （米）
-var gdwaterLengthNum = 10; //潜水面网格长个数
-var gdwaterWidthNum = 10 ; //潜水面网格宽个数
-var gdwaterHeight = 20;// 潜水面网格高度
+let surfaceLengthNum = 10; //地表网格长个数
+let surfaceWidthNumSurface = 10 ; //地表网格宽个数
+let vadoseLengthNum = 10 ; // 土壤网格长个数
+let vadoseWidthNum = 10 ; //土壤网格宽个数
+let vadoseHeigthNum = 10; //土壤层数
+let vadoseDepth = 200 ; //土壤深度 （米）
+let gdwaterLengthNum = 10; //潜水面网格长个数
+let gdwaterWidthNum = 10 ; //潜水面网格宽个数
+let gdwaterHeight = 20;// 潜水面网格高度
 
-var boundingBoxEntity = undefined; //包围盒实体
-var initCompleted = false;
-var loadingBoxCompleted = false;
+let boundingBoxEntity = undefined; //包围盒实体
+let initCompleted = false;
+let loadingBoxCompleted = false;
 
-var offset = new Cesium.Cartesian3(0, 0, -20); //地表、土壤、潜水面网格模型原点偏移量，不偏移影像就看不见了
-var xlSbo = undefined; //地表网格
-var xlVob = undefined; //土壤网格
-var xlGdb = undefined; //潜水面网格
+let offset = new Cesium.Cartesian3(0, 0, -20); //地表、土壤、潜水面网格模型原点偏移量，不偏移影像就看不见了
+let xlBbo = undefined; //包围盒对象
+let xlSbo = undefined; //地表网格
+let xlVob = undefined; //土壤网格
+let xlGdb = undefined; //潜水面网格
 
+// 边界矩形
+let rec = Cesium.Rectangle.fromDegrees(
+    lon1,
+    lat1,
+    lon2,
+    lat2
+);
+//填挖
+let recClip = new RectangleClip(viewer, rec)
 
 //获取影像经纬度坐标
 function getLocation(){
@@ -58,7 +69,7 @@ function getLocation(){
 
 //初始化
 async function init(){
-    let xlBbo = new XLBoundingBox(lon1, lat1, lon2 , lat2); //包围盒对象
+    xlBbo = new XLBoundingBox(lon1, lat1, lon2 , lat2); //包围盒对象
     await xlBbo.showBoundingBox();
     boundingBoxEntity = xlBbo.entity;
 
@@ -67,9 +78,6 @@ async function init(){
     xlGdb = new XLGdwaterBox(xlBbo.center, xlBbo.dimensions, vadoseDepth, gdwaterLengthNum, gdwaterWidthNum, gdwaterHeight);
     
     initCompleted = true;
-   // xlSbo.generate(offset);
-    // xlVob.gennerate(offset);
-    // xlGdb.gennerate(offset);
 
 }
 // init();
@@ -89,9 +97,9 @@ function main(){
 
 //删除所有网格
 function removeAllBoxs(){
-    xlSbo.remove();
+    xlSbo.removeByEntity();
     xlVob.removeByEntity();
-    xlGdb.remove();
+    xlGdb.removeByEntity();
 }
 
 //生成所有网格
@@ -107,6 +115,39 @@ function updateAllBoxs(offset){
     generateAllBoxs(offset);
 }
 
+//去除边框
+function showBoxOutline(flag){
+    xlSbo.showBoxOutline(flag);
+    xlVob.showBoxOutline(flag);
+    xlGdb.showBoxOutline(flag);
+}
+//是否填充
+function isFilled(flag){
+    xlSbo.isFilled(flag);
+    xlVob.isFilled(flag);
+    xlGdb.isFilled(flag);
+}
+//更改透明度
+function changeBoxAlpha(value){
+    xlSbo.changeBoxAlpha(value);
+    xlVob.changeBoxAlpha(value);
+    xlGdb.changeBoxAlpha(value);
+}
+//根据页面值更改
+function beforeChangeBoxValue(filled, alpha, color,outline, outlineColor, isID, isChange){
+    xlSbo.changeBoxValue(filled, alpha, color,outline, outlineColor, isID,isChange);
+    xlVob.changeBoxValue(filled, alpha, color,outline, outlineColor, isID, isChange);
+    xlGdb.changeBoxValue(filled, alpha, color,outline, outlineColor, undefined, isChange); //不需要id属性
+}
+
+// 入口函数
+$(document).ready(function () {
+    recClip.isFly = false; //关闭飞行
+    recClip.clip();
+    init().then(()=>{
+        main();    
+    });
+});
 
 //监听事件
 //初始化
@@ -120,7 +161,6 @@ $("#loadingBox").click(function (e) {
     e.preventDefault();
     loadingBoxCompleted ? true: main();
 });
-
 
 //追踪包围盒
 $("#trackBox").click(function (e) { 
@@ -211,6 +251,8 @@ $("#offsetCommit").click(function (e) {
     let changeObj = XLInteract.setParaCts("#offsetDiv input", offset);
     if (changeObj.isChange) {
         offset = changeObj.value;
+        beforeChangeBoxValue($('#fillBox').prop('checked'), $('#model-translucency').val(), undefined, $('#showBoxOutline').prop('checked')
+            , undefined, undefined, true);
         updateAllBoxs(changeObj.value)
     }
     $("#offsetDiv").hide();
@@ -228,5 +270,115 @@ $("#location").click(function (e) {
         $("#locationDiv").hide();
     }
    
+});
+
+//显示包围盒
+$('#isShowBoundingBox').click(function (e) { 
+    xlBbo.show($(this).prop('checked'))
+});
+$('#showBoxOutline').click(function (e) { 
+    showBoxOutline($(this).prop('checked'));
+});
+$('#fillBox').click(function (e) { 
+    isFilled($(this).prop('checked'));
+});
+$('#model-translucency').change(function (e) { 
+    if ($('#model-translucency-check').prop('checked')) {
+        $('#model-translucency-input').val($(this).val());  
+        changeBoxAlpha($(this).val());
+    }
+});
+// 地球透明
+$('#global-Translucency-check').click(function (e) { 
+    globe.translucency.enabled = $(this).prop('checked');  
+    globe.translucency.frontFaceAlpha = 0.5 ;  
+});
+$('#global-Translucency').change(function (e) { 
+    if ($('#global-Translucency-check').prop('checked')) {
+        $('#global-Translucency-input').val($(this).val());  
+        globe.translucency.frontFaceAlpha = parseFloat ($(this).val());
+    }
+});
+//地球随距离透明
+$('#distance-fade').click(function (e) { 
+    if (!$('#global-Translucency-check').prop('checked')) {
+        $('#global-Translucency-check').prop('checked', true);
+        globe.translucency.enabled = true
+    }
+    globe.translucency.frontFaceAlphaByDistance =
+        new Cesium.NearFarScalar(
+            300.0,
+            0.0,
+            2000.0,
+            1.0
+        )
+});
+$('#min-distance-fade').change(function (e) { 
+   if( $('#distance-fade').prop('checked')){
+    globe.translucency.frontFaceAlphaByDistance.near = parseFloat ($(this).val())
+   } 
+});
+// 页面加减号变化
+$(".xl-icon-ion a").each((index, element) => {
+    $(element).click(function (e) {
+        let iNode = $(element).children("i")
+        if (iNode.hasClass("ion-plus")) {
+            iNode.addClass("ion-minus").removeClass("ion-plus")
+            $(element).css("color","#ed7059")
+        } else {
+            iNode.addClass("ion-plus").removeClass("ion-minus")
+            $(element).css("color","")
+        }
+    });
+})
+// 开挖
+$('#outsideClip').click(function (e) {
+    if (recClip.planes) {
+        if (recClip.clipDirection != 'outside') {
+            recClip.clipDirection = 'outside'
+            recClip.enabled($(this).prop('checked'))
+            recClip.clip();
+        }else{
+            recClip.enabled($(this).prop('checked'))
+        }
+    }else{
+        if (recClip.clipDirection != 'outside') {
+            recClip.clipDirection = 'outside'
+        }
+        recClip.clip();
+    } 
+});
+$('#insideClip').click(function (e) {
+    if (recClip.planes) {
+        if (recClip.clipDirection != 'inside') {
+            recClip.clipDirection = 'inside'
+            recClip.enabled($(this).prop('checked'))
+            recClip.clip();
+        }else{
+            recClip.enabled($(this).prop('checked'))
+        }
+    }else{
+        if (recClip.clipDirection != 'inside') {
+            recClip.clipDirection = 'inside'
+        }
+        recClip.enabled($(this).prop('checked'))
+        recClip.clip();
+    } 
+});
+// 地形夸张
+$('#terrain-exaggerate-check').click(function (e) { 
+    if($(this).prop('checked')){
+        globe.terrainExaggeration = 2.0
+    }else{
+        globe.terrainExaggeration = 1.0
+    }
+    $('#terrain-exaggerate-input').val(globe.terrainExaggeration);     
+    $('#terrain-exaggerate-range').val(globe.terrainExaggeration);     
+});
+$('#terrain-exaggerate-range').change(function (e) { 
+    if ($('#terrain-exaggerate-check').prop('checked')) {
+        $('#terrain-exaggerate-input').val($(this).val());  
+        globe.terrainExaggeration = $(this).val()
+    }
 });
 

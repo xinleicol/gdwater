@@ -6,7 +6,7 @@ class XLBoxParticle extends XLBox {
     _url = 'http://127.0.0.1:5500/image/whatever.jpg'
     _particleStyle = {} //粒子样式
     particleStyle = {
-        color: Cesium.Color.RED, //开始颜色
+        Color: Cesium.Color.RED, //开始颜色
         emitter: new Cesium.BoxEmitter(new Cesium.Cartesian3(1,1,1)),
         speed: 0,
         imageSize: new Cesium.Cartesian2(11.0, 11.0),
@@ -85,7 +85,7 @@ class XLBoxParticle extends XLBox {
         }
         let newParticleSystem = new XLParticleSystem({
             ...this._particleStyle,
-            color: Cesium.Color.RED, //开始颜色
+            Color: Cesium.Color.RED, //开始颜色
             emitter: new Cesium.BoxEmitter(new Cesium.Cartesian3(50000, 50000, 25000)),
             image: XLBoxParticle.getImage(),
             // particleLife:20, //粒子生存时间
@@ -116,6 +116,15 @@ class XLBoxParticle extends XLBox {
         this.particleSystem = scene.primitives.add(newParticleSystem)
     }
 
+    /**
+     * 颜色更新
+     * @param {颜色} color 
+     */
+    changeColor(color){
+        if (color) {
+            this.particleStyle.Color = Cesium.Color.clone(color);
+        }
+    }
     /**
      * 
      * @param{粒子发射初始模型位置} emitterInitialLocation
@@ -170,40 +179,6 @@ class XLBoxParticle extends XLBox {
         })
     }
 
-
-
-    /**弃用 2021年5月17日15:23:11
-     * 模拟粒子飞行，从父节点拿元胞粒子，父节点再从父节点拿去，迭代
-     * @param {被该元胞污染的下层元胞} nextPollutedGrid 
-     * @param {粒子飞行的模型终点坐标} endModelPositon 
-     * @param {旋转变化矩阵} modelMatrix 
-     */
-    particleSimulate_backpack(currentPollutedGrid, nextPollutedGrid,spreadArea) {
-        let particlePool = nextPollutedGrid.particlePool
-        if (particlePool.length != 0) { //当前元胞粒子池中有粒子
-            let len = particlePool.length
-            let mass = nextPollutedGrid.cellMass
-            let massFormate = Math.ceil(mass) * this.massRatio //当前元胞该有的粒子数量
-            if (massFormate > len) {
-                let catchParticleNum = massFormate - len
-                this._particleCatch(currentPollutedGrid, nextPollutedGrid, catchParticleNum)
-            }
-        } else { //无粒子
-            let nextPollutedGridChange = nextPollutedGrid
-            while (nextPollutedGridChange.fatherNode) { //判断是否已经到了根节点，父节点为空就是根节点
-                let mass = nextPollutedGridChange.cellMass
-                let massFormate = Math.ceil(mass) * this.massRatio
-                let particleNumber = nextPollutedGridChange.particlePool.length //当前池中粒子数量
-                let catchParticleNum = massFormate - particleNumber > 0 ? massFormate - particleNumber : 0 //要从父节点获取的粒子数量
-
-                let fatherPollutedGridPositon = nextPollutedGridChange.fatherNode //父节点的网格索引
-                let fatherPollutedGrid = spreadArea[fatherPollutedGridPositon[0]][fatherPollutedGridPositon[1]] //父节点的元胞
-
-                this._particleCatch(fatherPollutedGrid, nextPollutedGridChange, catchParticleNum)
-                nextPollutedGridChange = fatherPollutedGrid //传入父节点，再从上级拿取粒子，迭代进行
-            }
-        }
-    }
 
 
     /**
@@ -278,6 +253,10 @@ class XLBoxParticle extends XLBox {
      * @param {飞行终点的世界坐标} endWorldPositon 
      */
     _catchOriginParticle(particle, system, endWorldPositon) { //获取粒子池中的粒子,给粒子添加终点位置
+        //改变飞行粒子颜色
+        particle.startColor =  Cesium.Color.clone(this.particleStyle.Color);
+        particle.endColor =  Cesium.Color.clone(this.particleStyle.Color);
+        //添加终点位置
         system._Particles[particle.id].endPosition = endWorldPositon
     }
 

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>可视化</title>
+    <script src="../../CesiumUnminified/Cesium.js"></script>
+    <script src="../../js/source/echarts.min.js"></script>
+    <script src="../../js/source/cesium.widget.min.js"></script>
+    <script src="../../js/source/cesium.map.min.js"></script>
+    <link rel="stylesheet" href="../../css/bootstrap.min.css">
+    <link rel="stylesheet" href="../../Cesium/Widgets/widgets.css" >
+    <link rel="stylesheet" href="../../css/bucket.css">
+    <link rel="stylesheet" href="../../css/cesium.widget.min.css">
+    <link rel="stylesheet" href="../../css/frame.css">
+</head>
+<body>
+    <!-- 地图 -->
+    <div id="cesium-container" class="fullSize"></div>
+    <!-- 标题栏 -->
+    <div class="xl-header">
+        <div class="xl-com">
+            <div class="xl-wraper"></div> 
+        </div>
+        <div class="xl-overlayer">
+            <div class="xl-title">
+                <span class="xl-font">场地污染扩散三维可视化模拟</span>
+            </div>
+            <div class="xl-footer">
+                <span class="xl-font">Three-dimensional visualization simulation of site pollution diffusion</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 侧边栏 -->
+    <!-- <div class="xl-sider">
+        <div class="xl-adorn">   
+          <div class="xl-bg">
+              <div class="xl-top">
+                <div class="xl-line"></div>
+                <div class="xl-line"></div>
+              </div>
+              <div class="xl-second">
+                  <div class="xl-subTile">
+                      <span>地表污染扩散扩散展示</span>
+                      <footer>The earth's surface</footer>
+                  </div>
+                  <div class="xl-surface-chart" id="xl-surface-chart"></div>
+              </div>
+              <div class="xl-second">
+                <div class="xl-subTile">
+                    <span>包气带污染扩散扩散展示</span>
+                    <footer>Vadose zone </footer>
+                </div>
+                <div class="xl-surface-chart" id="xl-surface-chart"></div>
+            </div>
+            <div class="xl-second">
+                <div class="xl-subTile">
+                    <span>潜水面污染扩散扩散展示</span>
+                    <footer>Groundwater level </footer>
+                </div>
+                <div class="xl-surface-chart" id="xl-surface-chart"></div>
+            </div>
+          </div>
+        </div>
+        
+    </div> -->
+
+    <script src="../../js/frame/index.js"></script>
+    <script src="../../js/frame/main.js" type="module"></script>
+    <script src="../../js/frame/chart.js" type="module"></script>
+</body>
+</html>

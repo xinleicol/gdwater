@@ -24,14 +24,14 @@
 
 #toolbar p{
     padding-left: 5px;
+    /* padding-top: 10px; */
 }
 
 #cellAlphaText{
     width: 50px;
 }
 
-#echart{
-    
+#echart{  
     background: rgba(42, 42, 42, 0.8);
     width: 600px;
     height: 400px;
@@ -39,3 +39,60 @@
     bottom: 10%;
 }
 
+
+#parametersPanel{
+    background: rgba(42, 42, 42, 0.8);
+    width: 25%;
+    height: 70%;
+    top: 5%;
+    left: 50%;
+    padding: 1%;
+    overflow: auto;
+}
+
+#parametersPanel .panel-primary{
+    padding: 4px;
+}
+
+#parametersPanel .panel-heading{
+    padding: 2px;
+    font-size: 16px;
+    text-align: center;
+}
+
+#parametersPanel p{
+    font-size: 8pt;
+}
+
+
+#parametersPanel table td{
+    transform: translateY(0);
+    text-align: center;
+    padding-left: 5%;
+    width: 35%;
+}
+
+#parametersPanel input{
+    width: 50%;
+    text-align: left;
+}
+
+.xl-bac {
+    position: relative;
+    display: inline-block;
+    align-items: center;
+    background: #303336;
+    border-radius: 4px;
+    padding: 5px 12px;
+    margin: 2px 3px;
+    border: 1px solid #444;
+    color: #edffff;
+    fill: #edffff;
+    cursor: pointer;
+}
+
+.xl-bac input {
+    display: inline-block;
+    vertical-align: middle;
+    border-radius: 4px;
+}

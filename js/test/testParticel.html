@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Particle</title>
+    <script type="text/javascript" src="../../js/source/Sandcastle-header.js"></script>
+    <script type="text/javascript" src="../../CesiumUnminified/Cesium.js"></script>
+    <link rel="stylesheet" href="../../css/bucket.css">
+
+</head>
+
+<body>
+    <div id="cesiumContainer" class="fullSize"></div>
+    <div id="loadingOverlay">
+        <h1>Loading...</h1>
+    </div>
+    <div id="toolbar"></div>
+    <script>
+        const viewer = new Cesium.Viewer("cesiumContainer", {
+            shouldAnimate: true,
+        });
+        const worldPosition = Cesium.Cartesian3.fromDegrees(-75.59777, 40.03883)
+        const modelMatrix = Cesium.Transforms.eastNorthUpToFixedFrame(
+            worldPosition
+        );
+        const worldToParticle = Cesium.Matrix4.inverseTransformation(
+            modelMatrix,
+            new Cesium.Matrix4()
+        );
+
+        let particleCanvas;
+
+        function getImage() {
+            if (!Cesium.defined(particleCanvas)) {
+                particleCanvas = document.createElement("canvas");
+                particleCanvas.width = 20;
+                particleCanvas.height = 20;
+                const context2D = particleCanvas.getContext("2d");
+                context2D.beginPath();
+                context2D.arc(8, 8, 8, 0, Cesium.Math.TWO_PI, true);
+                context2D.closePath();
+                context2D.fillStyle = "rgb(255, 255, 255)";
+                context2D.fill();
+            }
+            return particleCanvas;
+        }
+
+        function initBoxPosition(xNum, yNum, zNum,dimensions) {
+            let offsets = [];
+            for (let i = -xNum; i < xNum + 1; i++) {
+                for (let j = -yNum; j < yNum + 1; j++) {
+                    for (let k = -zNum; k < zNum + 1; k++) {
+                        let x = j * dimensions.x
+                        let y = i * dimensions.y
+                        let z = k * dimensions.z
+                        offsets.push(new Cesium.Cartesian3(x, y, z))
+                    }
+                }
+            }
+            return offsets
+        }
+        const dimensions = new Cesium.Cartesian3(100, 100, 100)
+        const offsets = initBoxPosition(1, 1, 1,dimensions)
+
+        function createBox(offsets, modelMatrix, dimensions) {
+            for (let i = 0; i < offsets.length; i++) {
+                const element = offsets[i];
+                let worldPosition = Cesium.Matrix4.multiplyByPoint(
+                    modelMatrix,
+                    element,
+                    new Cesium.Cartesian3()
+                )
+                viewer.entities.add({
+                    position: worldPosition,
+                    box: {
+                        dimensions: dimensions,
+                        fill: false,
+                        outline: true,
+                        outlineColor: Cesium.Color.RED,
+                    },
+                });
+            }
+        }
+        createBox(offsets, modelMatrix, dimensions);
+
+        const camera = viewer.scene.camera;
+        camera.lookAt(worldPosition, new Cesium.Cartesian3(0.0, -800.0, 800.0));
+
+        // 绘制坐标轴
+        viewer.scene.primitives.add(new Cesium.DebugModelMatrixPrimitive({
+            modelMatrix: modelMatrix,
+            length: 1000.0,
+            width: 2.0
+        }));
+
+        function forceFunction(options) {
+            const force = function (particle) {
+                // const position = Cesium.Matrix4.multiplyByPoint(
+                //     worldToParticle,
+                //     particle.position,
+                //     new Cesium.Cartesian3()
+                // );
+            }
+            return force;
+        };
+
+        const transformMatrix = {}
+        // 计算任意两向量的旋转矩阵
+        function vec3TransformMatrixFunction(originVec3, directionVec3){
+            if(transformMatrix[directionVec3]){
+                return transformMatrix[directionVec3];
+            }
+            const angle = Cesium.Cartesian3.angleBetween(originVec3, directionVec3)
+            // 两向量若是重合，则直接返回单位矩阵
+            if(angle == 0){
+                const rotationMatrix = Cesium.Matrix3.IDENTITY;
+                transformMatrix[directionVec3] = rotationMatrix;
+                return rotationMatrix
+            }
+            const axis = Cesium.Cartesian3.cross(originVec3, directionVec3, new Cesium.Cartesian3())
+            const quaternion = Cesium.Quaternion.fromAxisAngle(axis, angle)
+            const headingPitchRoll = Cesium.HeadingPitchRoll.fromQuaternion(quaternion)
+            const rotationMatrix = Cesium.Matrix3.fromHeadingPitchRoll(headingPitchRoll) 
+            transformMatrix[directionVec3] = rotationMatrix;
+            return rotationMatrix;
+        }
+
+        
+        // 根据方向和偏移坐标创建初始旋转矩阵，正东方向为0，逆时针方向依次+1，一共8个方向；
+        function transformFunction(position, direction) {
+            
+            const rotationMatrix = vec3TransformMatrixFunction(new Cesium.Cartesian3(0,0,1), new Cesium.Cartesian3(...direction))
+            // const headingPitchRoll = new Cesium.HeadingPitchRoll(i, j, k)
+            // const rotationMatrix = Cesium.Matrix3.fromHeadingPitchRoll(headingPitchRoll) 
+            // const rotationMatrix1 = Cesium.Matrix3.fromRotationY(Cesium.Math.toRadians(45 * i))
+            // const rotationMatrix2 = Cesium.Matrix3.fromRotationZ(Cesium.Math.toRadians(45 * j))
+            // const rotationMatrix = Cesium.Matrix3.multiply(rotationMatrix2, rotationMatrix1, new Cesium.Matrix3())
+            const translation = Cesium.Cartesian3.multiplyComponents(new Cesium.Cartesian3(...position, 0), dimensions,
+                new Cesium.Cartesian3())
+            const emitterModelMatrix = Cesium.Matrix4.fromRotationTranslation(rotationMatrix, translation)
+            return emitterModelMatrix;
+        }
+
+        const bursts = [];
+        for (let j = 0; j < 3; ++j) {
+            bursts.push(
+                new Cesium.ParticleBurst({
+                    time: Cesium.Math.nextRandomNumber() * 10,
+                    minimum: 100,
+                    maximum: 100,
+                })
+            );
+        }
+
+        const pollitionOptions = {
+            systemOptions: [{
+                    translation: [0, 0],
+                    direction: [[1,1,-1],[1,0,1],[0,0,1],[0,1,-1]],
+                }, 
+                // {
+                //     translation: [1, 1],
+                //     direction: [[2,0]],
+                // },
+                //  {
+                //     translation: [2, 2],
+                //     direction: [[3,0]],
+                // }, 
+                // {
+                //     translation: [2, 3],
+                //     direction: [[4,0]],
+                // }
+            ],
+
+            colorOptions: [{
+                    red: 0.6,
+                    green: 0.6,
+                    blue: 0.6,
+                    alpha: 1.0,
+                },
+                {
+                    red: 0.6,
+                    green: 0.6,
+                    blue: 0.9,
+                    alpha: 0.9,
+                },
+                {
+                    red: 0.5,
+                    green: 0.5,
+                    blue: 0.7,
+                    alpha: 0.5,
+                },
+            ],
+        };
+
+        function createParticleSystems(options, systemsArray) {
+            const systemOptions = options.systemOptions;
+            const length = systemOptions.length;
+            for (let i = 0; i < length; ++i) {
+                const {
+                    translation,
+                    direction
+                } = systemOptions[i]
+
+                for (let j = 0; j < direction.length; ++j) {
+                    const emitterModelMatrix = transformFunction(translation, direction[j])
+                    const color = Cesium.Color.fromRandom(
+                        options.colorOptions[i % options.colorOptions.length]
+                    );
+                    const force = forceFunction(options);
+
+                    const item = viewer.scene.primitives.add(
+                        new Cesium.ParticleSystem({
+                            image: getImage(),
+                            startColor: color,
+                            endColor: color.withAlpha(0.0),
+                            particleLife: 3.5,
+                            speed: 50.0,
+                            imageSize: new Cesium.Cartesian2(17.0, 17.0),
+                            emissionRate: 3,
+                            emitter: new Cesium.ConeEmitter(Cesium.Math.toRadians(20.0)),
+                            lifetime: 10,
+                            updateCallback: force,
+                            modelMatrix: modelMatrix,
+                            emitterModelMatrix: emitterModelMatrix,
+                            bursts: bursts,
+                            // loop: false,
+                        })
+                    );
+                    systemsArray.push(item);
+                }
+            }
+        }
+
+        const pollutionSystems = [];
+        createParticleSystems(pollitionOptions, pollutionSystems);
+    </script>
+</body>
+
+</html>
