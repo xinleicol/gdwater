@@ -71,6 +71,21 @@ class HeightMatrix {
         this._m = m
         return m
     }
+
+    /**
+     * 根据坐标获取高度
+     * @param {世界坐标} positions 
+     * @returns 
+     */
+    getHeight(positions){
+        return new Promise(resolve => {    
+            let promise = Cesium.sampleTerrainMostDetailed(viewer.terrainProvider, positions)
+            Cesium.when(promise,  updatedPositions => {
+                resolve(updatedPositions);
+            });
+        })
+        
+    }
 }
 
 export default HeightMatrix

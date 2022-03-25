@@ -18,6 +18,7 @@ class GdwaterLevelCell {
     _cellY = 0.0 // y
     _cellDiagonal = 0.0 //斜向方向
     _k = 0.05451948 //饱和土壤水渗透系数,m/h
+    _massThred = 1.4e-6; //阈值
     constructor(waterLevel, columns,rows, dimensions) {
         this._waterLevel = waterLevel
         this._dimensions = dimensions
@@ -60,6 +61,7 @@ class GdwaterLevelCell {
                     'name': "gdwaterCell",
                     'speed': 0, //速度，m/h
                     'time':0, //时间h
+                    'depth':null,//表示当前位置离地面的深度,暂时还未用到，可以用来固定粒子系统的位置
 
                 }
                 if (i == 0) {
@@ -98,7 +100,7 @@ class GdwaterLevelCell {
      * @param {污染物质量} value 
      * @param {包气带元胞的深度} vadoseHeight 
      */
-    setPollutantMass(row, col, value, vadoseHeight = 0, centerCellOffset) {
+    setPollutantMass(row, col, value, depth, centerCellOffset) {
         if (!centerCellOffset) centerCellOffset = 0;
         let rowChange = row + centerCellOffset;
         let colChange = col + centerCellOffset;
@@ -106,9 +108,9 @@ class GdwaterLevelCell {
         if ((!this.spreadArea[rowChange][colChange].isPolluted) & (this.spreadArea[rowChange][colChange].cellMass > 0)) {
             this.spreadArea[rowChange][colChange].isPolluted = true
             this.isPollutedArea.push(this.spreadArea[rowChange][colChange])
-            this.spreadArea[rowChange][colChange].fatherNode = [row, col, vadoseHeight];
+            // this.spreadArea[rowChange][colChange].fatherNode = [row, col, vadoseHeight];
             this.nextPollutedArea.push(this.spreadArea[rowChange][colChange]);
-            // console.log(this.spreadArea[rowChange][colChange].speed);
+            this.spreadArea[rowChange][colChange].depth = depth;
         }
     }
 
@@ -280,18 +282,23 @@ class GdwaterLevelCell {
     // 污染物质量更新, 机械弥散
     updateCellMass() {
         this.nextPollutedArea = []
-        let isPollutedArea = this.isPollutedArea.slice()
-        isPollutedArea.forEach((element) => {
+        let isPollutedArea = this.isPollutedArea.slice();
+        for(let i=0; i<isPollutedArea.length; i++){
+            const element = isPollutedArea[i];
             if (element.waterFlow.length != 0) {
 
                 // 水流方向扩散
                 let nextPollutedCell = this.spreadArea[element.waterFlow[0]][element.waterFlow[1]]
                 let outMassFlow = this._m * 2 * (element.cellMass - nextPollutedCell.cellMass)
                 //this._waterVeloty * element.cellDistance * (element.cellMass - nextPollutedCell.cellMass)
-                if (outMassFlow < 0) outMassFlow = 0
+                if (outMassFlow < this._massThred){
+                    continue;
+
+                }
+
                 nextPollutedCell.cellMass += outMassFlow
                 //当前质量更小，不进行扩散
-
+                
                 // 更新元胞状态
                 if (!nextPollutedCell.isPolluted) {
                     nextPollutedCell.isPolluted = true
@@ -307,7 +314,8 @@ class GdwaterLevelCell {
                 let results = this._judgeAdjacent(...position)
                 let outMassFlowComponents = 0.0
                 if (results.length != 0) {
-                    results.forEach((element2) => {
+                    for(let j=0; j<results.length; j++){
+                        const element2 = results[j];
                         let p = element2.position
                         let nextPollutedCell = this.spreadArea[p[0]][p[1]]
                         //计算水流影响因子
@@ -318,11 +326,15 @@ class GdwaterLevelCell {
                         let outMassFlowComponent = this._m * this._d * k * (element.cellMass - nextPollutedCell.cellMass)
                         //let distance = this._judgeDistance(...position, ...element2)
                         //let outMassFlowComponent = (1 / Math.sqrt(2)) * this._waterVeloty * distance * (element.cellMass - nextPollutedCell.cellMass)
-                        if (outMassFlowComponent < 0) outMassFlowComponent = 0 //质量更小不进行扩散
+                        // 质量不能小于阈值
+                        if (outMassFlowComponent < this._massThred){
+                            continue;
+                        }
+
                         outMassFlowComponents += outMassFlowComponent
-
+                        
                         nextPollutedCell.cellMass += outMassFlowComponent
-
+                            
                         if (!nextPollutedCell.isPolluted) {
                             nextPollutedCell.isPolluted = true
                             this._orderInsert(this.isPollutedArea, nextPollutedCell, 'cellMass') //递减插入
@@ -330,21 +342,24 @@ class GdwaterLevelCell {
                             this.nextPollutedArea.push(nextPollutedCell);
                             nextPollutedCell.fatherNode = element.position;
                         }
-                    })
+                    }
                 }
 
                 // 更新中央元胞污染物质量
                 element.cellMass -= (outMassFlow + outMassFlowComponents)
             }
-        })
+        }
+        return this.nextPollutedArea;
     }
 
     // 分子扩散
     updateCellMassForMole() {
         this.nextPollutedArea = []
         let isPollutedArea = this.isPollutedArea.slice()
-        let cellVolume = Cesium.Cartesian3.magnitudeSquared(this._dimensions)
-        isPollutedArea.forEach((element) => {
+        let cellVolume = Cesium.Cartesian2.magnitudeSquared(this._dimensions)
+        for(let k=0; k<isPollutedArea.length; k++){
+            const element = isPollutedArea[k];
+
             if (element.boundary == 'noBoundary') {
                 let position = element.position
 
@@ -353,6 +368,7 @@ class GdwaterLevelCell {
                 let outMassDiffusion = 0.0
                 let outMassDiffusionAll = 0.0
                 let time = element.time;
+
                 for (let i = position[0] - 1; i < position[0] + 2; i++) {
                     for (let j = position[1] - 1; j < position[1] + 2; j++) {
                         let element2 = this.spreadArea[i][j]
@@ -362,10 +378,12 @@ class GdwaterLevelCell {
                             outMassDiffusion = (this._moleK / (this._cellX * this._cellX)) * (element.cellMass - element2.cellMass)*time
                         }
 
-                        // 污染物中间质量比相邻元胞小的话不发生分子扩散
-                        if (outMassDiffusion > 0) {
-                            element2.cellMass += outMassDiffusion
+                        // 污染物质量不能小于阈值，否则不认为发生了扩散
+                        if(outMassDiffusion < this._massThred){
+                            continue;
                         }
+
+                        element2.cellMass += outMassDiffusion;
 
                         if (!element2.isPolluted) {
                             element2.isPolluted = true
@@ -382,25 +400,36 @@ class GdwaterLevelCell {
                 // 更新中央元胞质量
                 element.cellMass -= outMassDiffusionAll
             }
-        })
-
+        }
+        return this.nextPollutedArea;
     }
 
-    // 机械弥散加分子扩散共同作用
-    updateCellMassForMoleAndMech() {
-        this.nextPollutedArea = []
-        let isPollutedArea = this.isPollutedArea.slice()
-        let cellVolume = Cesium.Cartesian3.magnitudeSquared(this._dimensions)
-        isPollutedArea.forEach((element) => {
+    /**
+     * 机械弥散加分子扩散共同作用
+     * @param {污染元胞一个} pollutionCell 可选 输入了则以该元胞为中点扩散一次
+     */
+    updateCellMassForMoleAndMech(pollutionCell) {
+        this.nextPollutedArea = [];
+        let isPollutedArea = null;
+        if(pollutionCell){
+            isPollutedArea = [pollutionCell];
+        }else{
+            isPollutedArea = this.isPollutedArea.slice()
+        }
+        let cellVolume = Cesium.Cartesian2.magnitudeSquared(this._dimensions)
+        for(let k=0; k< isPollutedArea.length; k++){
+            const element = isPollutedArea[k];
+            
             if (element.waterFlow.length != 0 & element.boundary == 'noBoundary') {
                 let position = element.position
-
+                
                 let number = 0
                 let representDiag = [0, 2, 6, 8] //表示当前位置在斜对角
                 let outMassDiffusion = 0.0
                 let outMassDiffusionAll = 0.0
                 let time = element.time;
 
+                // 分子扩散
                 for (let i = position[0] - 1; i < position[0] + 2; i++) {
                     for (let j = position[1] - 1; j < position[1] + 2; j++) {
                         let element2 = this.spreadArea[i][j]
@@ -410,10 +439,15 @@ class GdwaterLevelCell {
                             outMassDiffusion = (this._moleK / (this._cellX * this._cellX)) * (element.cellMass - element2.cellMass)*time
                         }
 
+                        // 污染物质量不能小于阈值，否则不认为发生了扩散
+                        if(outMassDiffusion < this._massThred){
+                            continue;
+                        }
+
                         // 污染物中间质量比相邻元胞小的话不发生分子扩散
-                        if (outMassDiffusion > 0) {
-                            element2.isUpdateCellMass += outMassDiffusion //更新待更新质量，等待这个该时刻结束在添加到真正质量中
-                        } //以免对该时刻的机械弥散有影响
+                        // if (outMassDiffusion > 0) {
+                        element2.isUpdateCellMass += outMassDiffusion //更新待更新质量，等待这个该时刻结束在添加到真正质量中
+                        // } //以免对该时刻的机械弥散有影响
 
 
                         if (!element2.isPolluted) {
@@ -431,51 +465,53 @@ class GdwaterLevelCell {
 
                 // 更新中央元胞质量
                 element.isUpdateCellMass -= outMassDiffusionAll
-
+                
                 // 水流方向扩散
                 let nextPollutedCell = this.spreadArea[element.waterFlow[0]][element.waterFlow[1]]
                 let outMassFlow = this._m * 2 * (element.cellMass - nextPollutedCell.cellMass)
-                if (outMassFlow < 0) outMassFlow = 0
+                if (outMassFlow < this._massThred) {
+                    continue;
+                }
                 nextPollutedCell.isUpdateCellMass += outMassFlow
-
+                
                 // 更新元胞状态
                 if (!nextPollutedCell.isPolluted) {
                     nextPollutedCell.isPolluted = true
                     this._orderInsert(this.isPollutedArea, nextPollutedCell, 'cellMass') //递减插入
                     // this.isPollutedArea.push(nextPollutedCell)
                 }
-
+                
                 // 在水流方向有分向的元胞扩散模拟
-                //let position = element.position
                 let results = this._judgeAdjacent(...position)
                 let outMassFlowComponents = 0.0
-                if (results.length != 0) {
-                    results.forEach((element2) => {
-                        let p = element2.position
-                        let nextPollutedCell2 = this.spreadArea[p[0]][p[1]]
-                        let k = element2.cellSlop / element.cellSlop + 1
-                        let outMassFlowComponent = this._m * this._d * k * (element.cellMass - nextPollutedCell.cellMass)
-                        if (outMassFlowComponent < 0) outMassFlowComponent = 0 //质量更小不进行扩散 
-                        outMassFlowComponents += outMassFlowComponent
+                for(let i=0; i<results.length; i++){
+                    const element2 = results[i];
+                    let p = element2.position;
+                    let nextPollutedCell2 = this.spreadArea[p[0]][p[1]]
+                    let k = element2.cellSlop / element.cellSlop + 1
+                    let outMassFlowComponent = this._m * this._d * k * (element.cellMass - nextPollutedCell.cellMass)
+                    
+                    if (outMassFlowComponent < this._massThred){
+                        continue;
+                    }
 
-                        nextPollutedCell2.isUpdateCellMass += outMassFlowComponent
-
-                        if (!nextPollutedCell2.isPolluted) {
-                            nextPollutedCell2.isPolluted = true
-                            // this.isPollutedArea.push(nextPollutedCell2)
-                            this._orderInsert(this.isPollutedArea, nextPollutedCell2, 'cellMass') //递减插入
-                            this.nextPollutedArea.push(nextPollutedCell2);
-                            nextPollutedCell2.fatherNode = element.position;
-                        }
-                    })
+                    outMassFlowComponents += outMassFlowComponent
+                    nextPollutedCell2.isUpdateCellMass += outMassFlowComponent
+                    
+                    if (!nextPollutedCell2.isPolluted) {
+                        nextPollutedCell2.isPolluted = true
+                        // this.isPollutedArea.push(nextPollutedCell2)
+                        this._orderInsert(this.isPollutedArea, nextPollutedCell2, 'cellMass') //递减插入
+                        this.nextPollutedArea.push(nextPollutedCell2);
+                        nextPollutedCell2.fatherNode = element.position;
+                    }
                 }
-
                 // 更新中央元胞污染物质量
                 element.isUpdateCellMass -= (outMassFlow + outMassFlowComponents)
             }
-        })
-
-        this.updateIsUpdateCellMass()
+        }  
+        this.updateIsUpdateCellMass();
+        return this.nextPollutedArea;
     }
 
 
@@ -483,17 +519,11 @@ class GdwaterLevelCell {
     updateIsUpdateCellMass() {
         let isPollutedArea = this.isPollutedArea
         isPollutedArea.forEach((element) => {
-                // let position = element.position
-                // for (let i = position[0]-1; i < position[0]+2; i++) {
-                //     for (let j = position[1]-1; j < position[1]+2; j++) {
-                // let element2 = this.spreadArea[i][j]
                 if (element.isUpdateCellMass != 0) { //注意中央元胞的isUpdateCellMass为负值
                     element.cellMass += element.isUpdateCellMass
                     element.isUpdateCellMass = 0 //清空
                 }
             }
-            //  }
-            //  }
         )
     }
 

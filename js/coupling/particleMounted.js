@@ -1,30 +1,36 @@
 import XLBox from "../utils/XLBox.js";
+import Color100 from '../source/100.json' assert { type: 'json' };
 
 /**
  * 自定义操作粒子的过渡类
  */
 class ParticleMounted extends XLBox {
     pollitionOptions = {
-        systemOptions: [],
-        colorOptions: [{
-                red: 0.6,
-                green: 0.6,
-                blue: 0.6,
-                alpha: 1.0,
-            },
-            {
-                red: 0.6,
-                green: 0.6,
-                blue: 0.9,
-                alpha: 0.9,
-            },
-            {
-                red: 0.5,
-                green: 0.5,
-                blue: 0.7,
-                alpha: 0.5,
-            },
+        systemOptions: [{
+                translation:[],
+                direction:[],
+            }
         ],
+        massOptions: [0, 0.1, 0.3, 0.5, 0.7],
+        colorOptions: [{
+            red: 0.6,
+            green: 0.6,
+            blue: 0.6,
+            alpha: 1.0,
+        },
+        {
+            red: 0.6,
+            green: 0.6,
+            blue: 0.9,
+            alpha: 0.9,
+        },
+        {
+            red: 0.5,
+            green: 0.8,
+            blue: 0.6,
+            alpha: 0.6,
+        },
+    ],
     };
     constructor(center, dimensions, x, y, z) {
         super();
@@ -35,7 +41,7 @@ class ParticleMounted extends XLBox {
         this._dimensions = dimensions;
         this._particleCanvas = null;
         this.transformMatrix = {}
-        this.bursts = []
+        this._bursts = []
         this.pollutionSystems = []
         this._x = x;
         this._y = y;
@@ -44,8 +50,15 @@ class ParticleMounted extends XLBox {
 
     }
 
-    generate() {
-        this.createParticleSystems(this.pollitionOptions, this.pollutionSystems);
+    // 生成粒子系统
+    /**
+     * 两种模式，一种是根据质量计算当前粒子颜色，一种是直接赋予粒子颜色
+     * 颜色的优先级更高
+     * @param {质量} mass 
+     * @param {颜色} color 
+     */
+    generate(mass,color) {
+        this.createParticleSystems(this.pollitionOptions, this.pollutionSystems, mass, color);
     }
 
     get systemOptions() {
@@ -82,11 +95,9 @@ class ParticleMounted extends XLBox {
 
     forceFunction(options) {
         const force = function (particle) {
-            // const position = Cesium.Matrix4.multiplyByPoint(
-            //     worldToParticle,
-            //     particle.position,
-            //     new Cesium.Cartesian3()
-            // );
+            //const color1 = Cesium.Color.fromCssColorString(Color100[0][0]);
+            // const color2 = Cesium.Color.fromCssColorString(Color100[0][4]);
+           
         }
         return force;
     };
@@ -104,10 +115,16 @@ class ParticleMounted extends XLBox {
             transformMatrix[directionVec3] = rotationMatrix;
             return rotationMatrix
         }
+        // 两向量相反
+        if(angle == Math.PI){
+            const rotationMatrix =  Cesium.Matrix3.fromScale(new Cesium.Cartesian3(1,1,-1), new Cesium.Matrix3());
+            transformMatrix[directionVec3] = rotationMatrix;
+            return rotationMatrix
+        }
         const axis = Cesium.Cartesian3.cross(originVec3, directionVec3, new Cesium.Cartesian3())
         const quaternion = Cesium.Quaternion.fromAxisAngle(axis, angle)
-        const headingPitchRoll = Cesium.HeadingPitchRoll.fromQuaternion(quaternion)
-        const rotationMatrix = Cesium.Matrix3.fromHeadingPitchRoll(headingPitchRoll)
+        // const headingPitchRoll = Cesium.HeadingPitchRoll.fromQuaternion(quaternion)
+        const rotationMatrix = Cesium.Matrix3.fromQuaternion(quaternion)
         transformMatrix[directionVec3] = rotationMatrix;
         return rotationMatrix;
     }
@@ -123,13 +140,13 @@ class ParticleMounted extends XLBox {
     }
 
     createBursts() {
-        const bursts = this.bursts;
+        const bursts = [];
         for (let j = 0; j < 3; ++j) {
             bursts.push(
                 new Cesium.ParticleBurst({
                     time: Cesium.Math.nextRandomNumber() * 2.0,
                     minimum: 5,
-                    maximum: 20,
+                    maximum: 5,
                 })
             );
         }
@@ -137,22 +154,29 @@ class ParticleMounted extends XLBox {
     }
 
 
-    createParticleSystems(options, systemsArray) {
+    createParticleSystems(options, systemsArray, mass, color1) {
         const systemOptions = options.systemOptions;
         const length = systemOptions.length;
         const particleCanvas = this._getImage();
-        const bursts = this.createBursts();
+        let color = color1;
+        // const bursts = this.createBursts();
         for (let i = 0; i < length; ++i) {
             const {
                 translation,
                 direction
             } = systemOptions[i]
-
+            
+            if(!color){
+                color = this._getColor(mass);
+            }
+            // const n1 = Math.floor(Math.random()*5);
             for (let j = 0; j < direction.length; ++j) {
                 const emitterModelMatrix = this.transformFunction(translation, direction[j])
-                const color = Cesium.Color.fromRandom(
-                    options.colorOptions[i % options.colorOptions.length]
-                );
+                
+                // const color = Cesium.Color.fromCssColorString(Color100[0][n1])
+                // const color = Cesium.Color.fromRandom(
+                //     options.colorOptions[j % options.colorOptions.length]
+                // );
                 const force = this.forceFunction(options);
 
                 const item = viewer.scene.primitives.add(
@@ -160,16 +184,18 @@ class ParticleMounted extends XLBox {
                         image: particleCanvas,
                         startColor: color,
                         endColor: color.withAlpha(0.0),
-                        particleLife: 1.6,
-                        speed: 1.0,
+                        particleLife: 2.5,
+                        speed: 2.0,
                         imageSize: new Cesium.Cartesian2(7.0, 7.0),
-                        emissionRate: 3,
+                        emissionRate: 2,
                         emitter: new Cesium.ConeEmitter(Cesium.Math.toRadians(30.0)),
                         lifetime: 2.0,
                         updateCallback: force,
                         modelMatrix: this.modelMatrix,
                         emitterModelMatrix: emitterModelMatrix,
-                        bursts: bursts,
+                        startScale:1,
+                        endScale:0.5,
+                        // bursts: bursts,
                         // loop: false,
                     })
                 );
@@ -184,7 +210,7 @@ class ParticleMounted extends XLBox {
     }
 
     /**
-     * 计算该位置的模型坐标，即偏移量
+     * 计算该位置的网格坐标，即偏移量
      * @param {数组下标} position 
      * @returns 
      */
@@ -212,6 +238,64 @@ class ParticleMounted extends XLBox {
         const res = Cesium.Cartesian3.subtract(pos2, pos1, new Cesium.Cartesian3());
         return res;
     }
+
+
+    //移除所有粒子
+    removeAll(){
+        this.pollutionSystems.forEach(element => {
+            viewer.scene.primitives.remove(element);
+        })
+        this.pollutionSystems = [];
+    }
+
+
+    /**
+     * @param {Number} n
+     */
+    set particelNumbers(n){
+        this.pollutionSystems.forEach(element => {
+            element.emissionRate = n;
+        })
+    }
+
+    /**
+     * @param {Number} s
+     */
+    set particleSize(s){
+        this.pollutionSystems.forEach(element => {
+            element.startScale = s;
+            element.endScale = s*0.5;
+        })
+    }
+
+    /**
+     * @param {Boolean} flag
+     */
+    set bursts(flag){
+        let bursts = null;
+        if(Boolean(flag)){
+            bursts = this.createBursts();
+        }
+        this.pollutionSystems.forEach(element => {
+            element.bursts = bursts;
+        })
+    }
+
+
+    // 根据质量获取对应的颜色
+    _getColor(mass){
+        const massOptions = this.pollitionOptions.massOptions;
+        let index = 0;
+        for(let i=massOptions.length-1; i>=0; i--){
+            if(mass >= massOptions[i]){
+                index = i;
+                break;
+            }
+        }
+        const color = Cesium.Color.fromCssColorString(Color100[0][index])
+        return color;
+    }
+
 
 }
 

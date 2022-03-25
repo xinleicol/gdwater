@@ -14,9 +14,8 @@ class SurfaceCell {
     isPollutedArea = [] //所有被污染的元胞数组
     nextPollutedArea = [] //下一时刻将被污染的元胞数组
     nextNotPollutedCells = []; //下一步长被污染、当前步长未被污染的元胞数组
-    verKdiff = 3.96 //污染物向土壤中的渗透系数 m/h
-    intervalTime = 5 //假定1m元胞的扩散时间步长为5小时 1/0.2
-    verMass = this.verKdiff * this.intervalTime //一个步长时污染向土壤中渗透量
+    verKdiff = 3.95e-4 //污染物向土壤中的渗透系数 m/h
+    verMass = 0; //一个步长时污染向土壤中渗透量
     pollutionSourceCell = [] //污染源元胞
     _xlength = 5.0; //x方向网格长度
     _ylenght = 5.0;
@@ -258,6 +257,7 @@ class SurfaceCell {
                         inclineMass += updateCellMass
                     }
 
+                    
                     // 改变状态
                     if (!this.spreadArea[m][n].isPolluted) { //当前元胞还未被污染，这是新的污染元胞
                         this.spreadArea[m][n].isPolluted = true //表示当前元胞已被污染
@@ -266,17 +266,19 @@ class SurfaceCell {
                         // this._orderInsert(this.isPollutedArea, this.spreadArea[m][n], 'cellMass'); //有序插入
                         
                         //计算速度和时间
-                        let massD = (this.spreadArea[i][j].cellMass - this.spreadArea[i][j].oneTime*this.verKdiff/3600)
-                        if(massD < 10e-6){
-                            massD = this.spreadArea[i][j].cellMass;
-                        }
-                        let rh = massD / this._roll / (this._xlength*this._ylenght); //水力半径的计算
+                        let currentMass = this.spreadArea[i][j].cellMass;
+
+                        let rh = currentMass / this._roll / (this._xlength*this._ylenght); //水力半径的计算
                         let v = 1 / this._n * Math.pow(rh, 2 / 3) * Math.pow(slop, 1 / 2) * this._fre;
+                        
                         if(this.isRain){//考虑降雨
                             rh += (this._rainStrength - this._rainOut) * this._rainTime / 1000; //加上降雨的水力半径
                             v = this._fre * Math.pow(this._rainStrength, 1-this._n)*Math.pow(rh, 2 / 3) * Math.pow(slop, 1 / 2)
                         }
 
+                        // 换算成m/h
+                        v = v * 3600;
+                        
                         // 赋值
                         this.spreadArea[m][n].speed = v;
                         let t = this._xlength / v; 
@@ -288,7 +290,12 @@ class SurfaceCell {
                         //若已污染则不修改下一个
                         this.nextNotPollutedCells.push(this.spreadArea[m][n]);
                     }
+
+                    // 向下渗入土壤
+                    let massD = this.spreadArea[m][n].oneTime*this.verKdiff * this._xlength * this._ylenght * this._roll;
+                    this.verMass = massD;
                 }
+
                 k++
             }
         }
@@ -318,6 +325,7 @@ class SurfaceCell {
         let k = 0
         let crossMass = 0.0
         let inclineMass = 0.0
+        const threshold = this._massThreshold;
         for (let m = i - 1; m < i + 2; m++) {
             for (let n = j - 1; n < j + 2; n++) {
                 let currentMass = this.spreadArea[m][n].cellMass
@@ -332,12 +340,20 @@ class SurfaceCell {
                     if (k % 2 == 1) {
                         let updateCellMass = mxshu * diff * (currentMass - centerMass) //<0
                         updateCellMass = updateCellMass < 0 ? updateCellMass : 0 ;//质量变大不发生流动
+                        // 大于阈值不发生扩散
+                        if(-updateCellMass <  threshold){
+                            continue;
+                        }
                         this.spreadArea[m][n].cellMass += -updateCellMass //更新下个污染元胞的质量
                         crossMass += updateCellMass // 当前元胞的静态扩散量
 
                     } else {
                         let updateCellMass = mxshu * dxshu * diff * (currentMass - centerMass) //<0
                         updateCellMass = updateCellMass < 0 ? updateCellMass : 0 ;//质量变大不发生流动
+                        // 大于阈值不发生扩散
+                        if(-updateCellMass <  threshold){
+                            continue;
+                        }
                         this.spreadArea[m][n].cellMass += -updateCellMass
                         inclineMass += updateCellMass
                     }
@@ -349,11 +365,9 @@ class SurfaceCell {
                         this.isPollutedArea.push(this.spreadArea[m][n]);
 
                         //计算速度和时间
-                        let massD = (this.spreadArea[i][j].cellMass - this.spreadArea[i][j].oneTime*this.verKdiff/3600)
-                        if(massD < 10e-6){
-                            massD = 0;
-                        }
-                        let rh = massD / this._roll / (this._xlength*this._ylenght); //水力半径的计算
+                        let currentMass = this.spreadArea[i][j].cellMass;
+                       
+                        let rh = currentMass / this._roll / (this._xlength*this._ylenght); //水力半径的计算
                         const time = this.spreadArea[i][j].time / 60;//分钟
                         const oneTime = this.spreadArea[i][j].oneTime / 60 / 60;//小时
                         const rainStrength = this.getRainWithTime(time);
@@ -361,6 +375,9 @@ class SurfaceCell {
                         rh += (rainStrength - rainOut) * oneTime / 1000; //加上降雨的水力半径
                         let v = this._fre * Math.pow(this._rainStrength, 1-this._n)*Math.pow(rh, 2 / 3) * Math.pow(slop, 1 / 2);
                         
+                        // 换算成h
+                        v = v *3600;
+
                         // 赋值
                         let t = this._xlength / v; //s
                         this.spreadArea[m][n].oneTime = t; 

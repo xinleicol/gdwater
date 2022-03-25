@@ -23,7 +23,6 @@ class VadoseZoneCell {
     _paramM = 1 - 1 / this._paramN
     _paramW = 0.0506 //参数阿尔法
     _permeabilityKS = 0.05451948 //饱和土壤水渗透系数,m/h
-    timeStep = 50 //时间步长为5小时
     mechanicalDegreeLong = 0.01008 //纵向（水流方向）机械弥散度m2/h
     mechanicalDegreeTran = this.mechanicalDegreeLong / 3 //横向（垂直水流方向）机械弥散度
     mechanicalDegreeVert = this.mechanicalDegreeLong / 3 //垂向（垂直水流方向）机械弥散度
@@ -32,6 +31,9 @@ class VadoseZoneCell {
     _m = 0.16;
     _d = 0.084;
     _molecular = 0.51e-4 //分子扩散系数 m2/h
+    _massThreshold = 1.4e-6 //g阈值
+    _roll = 876000 //g/m3苯的密度
+    _outGdwater = []; //输出道潜水面的质量和位置[2,2,1.38,0.001]0.001为质量g,2,2为坐标,1.38为距离地面的深度
     constructor(waterLevel, rows, columns, heights, dimensions, heightM) {
         this._waterLevel = waterLevel //地下水位矩阵
         // this._waterVeloty = waterVeloty
@@ -68,8 +70,8 @@ class VadoseZoneCell {
                         'cellMass': 0.0,
                         'isUpdateCellMass': 0.0,
                         'waterFlow': undefined, //水流方向
-                        'waterLevel': this._setWaterLevel(this._heightM[i][j], k), //地下水位
-                        'moistureContent': this._setMoistureContent(this._heightM[i][j], k), //(this._waterLevel[i][j]), //非饱和土壤体积含水率
+                        'waterLevel': 0, //压力水头
+                        'moistureContent': 0,
                         'permeabilityCoeff': 0.0, //非饱和土壤水渗透系数
                         'cellSlop': null, //坡降,认为是当前的水流速度
                         'lessWaterCells': [], //临近元胞中水位更小的元胞
@@ -91,7 +93,8 @@ class VadoseZoneCell {
                         'color':'white', //元胞颜色
                         'speeds':[], //速度各分量
                         'fenliangPosition':undefined, //机械弥散分量位置
-                        'timeStep':0 //时间步长
+                        'timeStep':0, //时间步长
+                        'h':0,//压力水头
 
                     }
                     if (k == 0) {
@@ -114,6 +117,12 @@ class VadoseZoneCell {
                     }
                     // 边界条件后面再改进
 
+                    //压力水头
+                    this._setWaterLevel(this._heightM[i][j], this._waterLevel[i][j], k, this.spreadArea[i][j][k])
+
+                    // 土壤含水率
+                    this._setMoistureContent(this.spreadArea[i][j][k])
+                    
                     //土壤水渗透系数
                     this._setPermeabilityCoeff(this.spreadArea[i][j][k])
                     this._setLocationH(this.spreadArea[i][j][k], k)
@@ -123,6 +132,10 @@ class VadoseZoneCell {
         }
         this._updateWaterFlow() //更新水流流向和坡降
 
+    }
+
+    get outGdwater(){
+        return this._outGdwater;
     }
 
     //有序插入，递减
@@ -149,9 +162,7 @@ class VadoseZoneCell {
      * @param {污染物质量} value 
      */
     setPollutantMass(row, col, heigths, value) {
-        if (!this.spreadArea[row][col][heigths].isPolluted) {
-            this.spreadArea[row][col][heigths].cellMass += value
-        }
+        this.spreadArea[row][col][heigths].cellMass += value;
         if ((!this.spreadArea[row][col][heigths].isPolluted) & (this.spreadArea[row][col][heigths].cellMass > 0)) {
             this.spreadArea[row][col][heigths].isPolluted = true
             this.isPollutedArea.push(this.spreadArea[row][col][heigths])
@@ -165,22 +176,29 @@ class VadoseZoneCell {
      * @param {相对高程} value 
      * @returns 元胞的压力水头
      */
-    _setWaterLevel(value, k) {
-        let h = this._dimensions.z * (this._heights - k - 0.5)
-        let v = value - h
-        return v
+    _setWaterLevel(v1, v2, k, cell) {
+        const depth = (k+0.5)*this._cellZ;
+        const h0 = v1-v2;
+        const k1 = h0 / (Math.exp(h0) - 1);
+        const h = h0 - k1*Math.exp(depth) + k1;
+        cell.waterLevel = h;
+        return h;
+        // let h = this._dimensions.z * (this._heights - k - 0.5)
+        // let v = value - h
+        // return v
     }
 
     /**
      * 
-     * @param //{当前水位值} waterLevelValue //修改，压力水头不是水位值，看成是当前位置离地面的高度，也就是元胞的高度，单位是cm
+     * @param 
      * @returns 土壤体积含水率
      */
-    _setMoistureContent(v, k) { //waterLevelValue
-        let h = Math.abs(this._setWaterLevel(v, k))
+    _setMoistureContent(cell) { //waterLevelValue
+        let h = cell.waterLevel;
         let fm1 = 1 + Math.pow(this._paramW * h, this._paramN)
         let fm = Math.pow(fm1, this._paramM)
         let res =  this._moistureContentR + (this._moistureContentS - this._moistureContentR) / fm
+        cell.moistureContent = res;
         return res
     }
 
@@ -331,7 +349,6 @@ class VadoseZoneCell {
      */
     _updateCellWaterFlow(i, j, k) {
         if (this.spreadArea[i][j][k].boundary == 'noBoundary') { //边界条件有点复杂，后面改进、
-            // this._computerWaterFlow(i, j, k, i - 1, i + 1, j - 1, j + 1, k - 1, k + 1)
             let results = this._computerWaterFlow(i, j, k, i - 1, i + 1, j - 1, j + 1, k - 1, k + 1)
             const cell =  this.spreadArea[i][j][k]
             cell.cellSlop = results.cellSlop
@@ -366,8 +383,13 @@ class VadoseZoneCell {
         if (!currentCell) { //当前元胞不存在
             return
         }
+        // 判断质量是否小于阈值
+        if(Math.abs(mass) < this._massThreshold){//小于阈值，不发生扩散
+            return;
+        }
+
         //判断是否为污染物输出,更新状态
-        if (mass > 0 & !currentCell.isPolluted) {
+        if (mass > 0 && !currentCell.isPolluted) {
             currentCell.isPolluted = true
             this.nextPollutedArea.push(currentCell)
             // this.isPollutedArea.push(currentCell)
@@ -406,7 +428,8 @@ class VadoseZoneCell {
     // 是否超出包气带的范围，因为元胞空间包含地表以上和地下水位以下的部分
     _isVadoseCell([i,j,k]) {
         let cell = this.spreadArea[i][j][k]
-        return cell.locationH < cell.height ? cell.locationH > cell.gdwaterLevel ? true : false : false
+        return cell.waterLevel >= 0 ;
+        // return cell.locationH < cell.height ? cell.locationH > cell.gdwaterLevel ? true : false : false
     }
 
     /**
@@ -414,14 +437,12 @@ class VadoseZoneCell {
      * @param {当前污染元胞} currentCell 
      */
     _getOutMass(currentCell) {
-        let lessWaterCells = currentCell.lessWaterCells
+        let lessWaterCells = currentCell.lessWaterCells;
         if (lessWaterCells.length > 0) {
             let allTime = 0
             let outMass = 0
             for (const element of lessWaterCells) {
-                if (!this._isVadoseCell(element.position)) {
-                    continue
-                }
+               
                 let [i,j,k] = element.position
                 let spreadArea = this.spreadArea[i][j][k]
                 let md = this._m
@@ -430,9 +451,20 @@ class VadoseZoneCell {
                 }
                 let mass = md *element.k *(currentCell.cellMass - spreadArea.cellMass)
                 
+                // 判断质量是否小于阈值
+                if(mass < this._massThreshold){//小于阈值，不发生扩散
+                    continue;
+                }
+
                 outMass -= mass
                 allTime += element.time
-                this._updateCellMassOneStep(currentCell.position, element.position, mass)
+
+                // 判断是否到达潜水层，若到达将质量输出到潜水层
+                if (this._isVadoseCell(element.position)) {
+                    this._updateCellMassOneStep(currentCell.position, element.position, mass)
+                }else{
+                    this._outGdwater.push([element.position[0], element.position[1], mass]);
+                }
             }
             //更新质量
             this._updatePollutedState(currentCell, outMass)
@@ -444,10 +476,10 @@ class VadoseZoneCell {
     // 污染物质量更新，对流作用
     updateCellMass() {
         let isPollutedArea = Array.from(this.isPollutedArea)
-        this.nextPollutedArea = []
+        this.nextPollutedArea = [];
+        this._outGdwater = [];
         for (const element of isPollutedArea) {
             this._getOutMass(element)
-            // console.log(element.averageTime);
         }
     }
 
@@ -537,7 +569,8 @@ class VadoseZoneCell {
     //对流弥散作用 先对流后弥散
     simulate() {
         const isPollutedArea = Array.from(this.isPollutedArea)
-        this.nextPollutedArea = []
+        this.nextPollutedArea = [];
+        this._outGdwater = [];
         isPollutedArea.forEach((element) => {
             if (element.boundary == 'noBoundary') {
 
@@ -551,6 +584,27 @@ class VadoseZoneCell {
             }
         })
     }
+
+
+    // 一步扩散
+    simulateByStep(currentPollutedCell){
+        this.nextPollutedArea = [];
+        this._outGdwater = [];
+        if (currentPollutedCell.boundary === 'noBoundary') {
+
+            this._getOutMass(currentPollutedCell)
+
+            //计算机械弥散系数  
+            this._setMechanicalCoeff(currentPollutedCell)
+
+            //更新质量
+            this._updateMechanicalCell(currentPollutedCell)
+        }
+       
+        return this.nextPollutedArea;
+    }
+
+
 
 
 }

@@ -10,13 +10,12 @@ import HeightMatrix from "../utils/transform/HeightMatrix.js";
 class Middleware extends Computer {
     
     constructor(viewer, boundingPositions =[
-        [118.7436, 32.24981],
-        [118.74304, 32.25009],
-        [118.74267, 32.25026],
-        [118.74299, 32.25061],
-        [118.74351, 32.25100],
-        [118.74418, 32.25034],
-        [118.74348, 32.24999]
+        [118.7426057038760, 32.2504552130810],
+        [118.7429255928240, 32.2497469657935],
+        [118.7433262661830, 32.2499205123251],
+        [118.7440610544440, 32.2503070328395],
+        [118.7434864037540, 32.2510766586447],
+        [118.7432226284700, 32.2509838788282],
     ]) {
         super();
         this._viewer = viewer;
@@ -31,10 +30,20 @@ class Middleware extends Computer {
         this._heightMatrix = undefined;
         this._matrix = undefined;
         this._computerColor = new ComputerColor()
-        this._addRectangle = undefined;
         this._size = [5,5]
+        this._isGenerate = false; //是否生成了
+        this._recdaos = null;
     }
 
+    get recdaos(){
+        return this._recdaos;
+    }
+
+    get dimensions(){
+        return new Cesium.Cartesian3(this.rectangleCellDao.length, 
+            this.rectangleCellDao.width,
+            0)
+    }
     /**
      * @param {number[]} s
      */
@@ -64,15 +73,11 @@ class Middleware extends Computer {
         this._boundingPoints = b
     }
 
-    // 主程序 {是否生成划分网格} flag 
-    async computer(flag) {
+    // 主程序 
+    async computer() {
         this.setView();
         this.clip();
         this.splite();
-        if(flag){
-            this.division();
-            this.showDivision(false);
-        }
         return await this.getHeightMatrix();
 
     }
@@ -92,7 +97,7 @@ class Middleware extends Computer {
     splite() {
         this._rectangleCellDao = new RectangleCellDao(null, null, ...this._size);
         this._computerRectangle = new ComputerRectangle(this._rec, this._rectangleCellDao)
-        this._computerRectangle.computer();
+        this._recdaos = this._computerRectangle.computer();
     }
 
     // 获取高度矩阵
@@ -104,13 +109,22 @@ class Middleware extends Computer {
         return matrix;
     }
 
+    // 获取包围盒中点
+    async getCenter() {
+        const centerCar = Cesium.Rectangle.center(this.rec, new Cesium.Cartographic());
+        const position = await this._heightMatrix.getHeight([centerCar]);
+        const res = Cesium.Cartographic.toCartesian(position[0], Cesium.Ellipsoid.WGS84, new Cesium.Cartesian3())
+        return res;
+    }
 
     // 划分网格并显示
     division(s={}) {
+        if(this._isGenerate)  return;
         let style = {
             outline: true,
-            fill: false,
-            outlineColor: Cesium.Color.RED,
+            outlineColor: Cesium.Color.BLACK,
+            height: 15.3,
+            material: Cesium.Color.GREEN.withAlpha(0.6),
         }
         Object.assign(s, style);
         if (this._computerRectangle) {
@@ -118,6 +132,7 @@ class Middleware extends Computer {
             this._addRectangle.changeStyle(style)
             this._addRectangle._getEntities(true);
         }
+        this._isGenerate = true;
     }
 
     // 显示
@@ -132,6 +147,17 @@ class Middleware extends Computer {
         this._addRectangle.clearAll();
     }
 
+
+      /**
+     * 改变开挖方向
+     */
+    changeClipDirection() {
+        this._recClip.changeClipDirection()
+    }
+
+    enableClip(flag) {
+        this._recClip.enabled(flag)
+    }
 
 }
 

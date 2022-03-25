@@ -3,9 +3,15 @@ import ComputerGdwater from "../utils/computer/ComputerGdwater.js";
 import Splite from "../utils/dispose/Splite.js";
 
 
-let computerGdwater2;
 let func;
 let splite;
+
+const gdwaterParam = {
+    cellSize: [5,5], //元胞大小
+    extendNumber : [2,2], //向右上延伸出的点位个数
+    computerGdwater2: null,//地下水位夸大矩形类
+    computerGdwater3: null, //污染物扩散类
+}
 
 async function main(type='water',israndom=false, number=2, isPause=false){
 
@@ -17,9 +23,14 @@ async function main(type='water',israndom=false, number=2, isPause=false){
     // 地形深度检测
     viewer.scene.globe.depthTestAgainstTerrain = false
 
-    splite = new Splite(2,2)
-    splite.setCellSize(5,5)
+    const cellSize = gdwaterParam.cellSize;
+    const extendNumber = gdwaterParam.extendNumber;
+    splite = new Splite(extendNumber[0], extendNumber[1]);
+    splite.setCellSize(cellSize[0], cellSize[1]);
     splite.dispose()
+
+    // 固定视角
+    splite.lookAt();
 
     const [rec, rectangleCellDao, recdaos] = [splite._rectangle, splite._rectangleCellDao, splite._recdaos]
 
@@ -29,9 +40,9 @@ async function main(type='water',israndom=false, number=2, isPause=false){
     // computerGdwater.generate(conerMatrix)
 
     // 水位夸大后的矩形 
-    computerGdwater2 = new ComputerGdwater(rec, rectangleCellDao, recdaos)
+    let computerGdwater2 = new ComputerGdwater(rec, rectangleCellDao, recdaos)
     const style = {
-        material: Cesium.Color.BLUE.withAlpha(0.6),
+        material: Cesium.Color.fromCssColorString('#005C97').withAlpha(0.6),
         type : 'exag-gdwater-polygon',
     }
     const newMatrix = computerGdwater2.exaggerateWater(conerMatrix,  20)
@@ -39,27 +50,32 @@ async function main(type='water',israndom=false, number=2, isPause=false){
     computerGdwater2.generate(newMatrix,false)
 
     // 污染渐变矩形
-    const computerGdwater3 = new ComputerGdwater(rec, rectangleCellDao, recdaos)
+    let computerGdwater3 = new ComputerGdwater(rec, rectangleCellDao, recdaos)
     const style3 = {
         type : 'pollution-gdwater-polygon',
         show: false,
     }
     computerGdwater3.setStyle(style3)
-    computerGdwater3.generate(newMatrix,false)
+    computerGdwater3.generate(newMatrix,true)
     
     // 扩散，变成矩形个数
-    rectangleCellDao.xNumber -= 2
-    rectangleCellDao.yNumber -= 2
     const {
         waterMatrix
     } = await computerGdwater3.getWaterMatrix(rectangleCellDao, recdaos)
-    const gdwaterCell = new GdwaterLevelCell(waterMatrix, rectangleCellDao.xNumber, rectangleCellDao.yNumber, new Cesium.Cartesian2(rectangleCellDao.length, rectangleCellDao.width))
+    const xNumber = rectangleCellDao.xNumber - rectangleCellDao.ex;
+    const yNumber = rectangleCellDao.yNumber - rectangleCellDao.ey;
+    const gdwaterCell = new GdwaterLevelCell(
+        waterMatrix, 
+        xNumber, 
+        yNumber,
+        new Cesium.Cartesian2(rectangleCellDao.length, rectangleCellDao.width)
+    )
     
     // 设置污染源
     if(israndom){
         for (let i = 0; i < number; i++) {
-            let x = Math.floor(rectangleCellDao.xNumber * Math.random()) 
-            let y = Math.floor(rectangleCellDao.yNumber * Math.random()) 
+            let x = Math.floor(xNumber * Math.random()) 
+            let y = Math.floor(yNumber * Math.random()) 
             gdwaterCell.setPollutantMass(x,y,1000);
         }
     }else{
@@ -70,16 +86,18 @@ async function main(type='water',israndom=false, number=2, isPause=false){
 
     //gdwaterCell.updateCellMassForMole
     let infun1 = gdwaterCell.updateCellMass;
-    let infun2;
     if(type === 'mole'){
         infun1 = gdwaterCell.updateCellMassForMole
     }else if(type === 'water and mole'){
-        infun1 = gdwaterCell.updateCellMass;
-        infun2 = gdwaterCell.updateCellMassForMole
+        infun1 = gdwaterCell.updateCellMassForMoleAndMech;
     }
-    func = computer(gdwaterCell, computerGdwater3, infun1, infun2, 2000);
+    func = computer(gdwaterCell, computerGdwater3, infun1, 2000);
     func(isPause);
     // viewer.scene.postUpdate.addEventListener(func) 
+
+    // 赋值
+    gdwaterParam.computerGdwater2 = computerGdwater2;
+    gdwaterParam.computerGdwater3 = computerGdwater3;
 }
 
 
@@ -89,7 +107,7 @@ async function main(type='water',israndom=false, number=2, isPause=false){
  * @param {计算} computerVadoseDao2 
  * @returns 
  */
- function computer(gdwaterCell, computerGdwater, func, func2,time){
+ function computer(gdwaterCell, computerGdwater, func,time){
     let timer;
     let nextPollutedArea;
     return function(isPause){  
@@ -103,17 +121,9 @@ async function main(type='water',israndom=false, number=2, isPause=false){
             timer = setInterval(() => {
                 func.call(gdwaterCell)
                 nextPollutedArea = gdwaterCell.nextPollutedArea
-                console.log(nextPollutedArea.length);
+                // console.log(nextPollutedArea.length);
+                // console.log(gdwaterCell.isPollutedArea);
                 computerGdwater.updateColor(gdwaterCell.isPollutedArea)
-
-                if(func2){
-                    func2.call(gdwaterCell)
-                    nextPollutedArea = gdwaterCell.nextPollutedArea
-                    console.log(nextPollutedArea.length);
-                    computerGdwater.updateColor(gdwaterCell.isPollutedArea)
-                }
-                
-                if(nextPollutedArea.length === 0) clearInterval(timer) 
             }, time);
         }
     }
@@ -133,7 +143,9 @@ $('#water-mole').click(function (e) {
     main('water and mole');
 });
 $('#show-water-button').click(function (e) { 
-    computerGdwater2.show($(this).children("input").prop('checked'))
+    if(gdwaterParam.computerGdwater2){
+        gdwaterParam.computerGdwater2.show($(this).children("input").prop('checked'))
+    }
 });
 $('#show-depth-button').click(function (e) { 
     viewer.scene.globe.depthTestAgainstTerrain = $(this).children("input").prop('checked')
@@ -191,4 +203,21 @@ $('#reset').click(function (e) {
     e.preventDefault();
     viewer.dataSources.removeAll();
     splite.enableClip(false)
+});
+$('#show-pollution-button').click(function (e) { 
+    if(gdwaterParam.computerGdwater3){
+        gdwaterParam.computerGdwater3.show($(this).children("input").prop('checked'))
+    }
+});
+$('#look-at').click(function (e) {
+    if(!splite){
+        return;
+    }
+    if($(this).children("input").prop('checked')){
+        splite.lookAt();
+    }else{
+        splite.cancleLookAt();
+    }
+    
+    
 });

@@ -28,20 +28,28 @@ let boundingPositions = [
 ];
 
 
-async function init() {
+/**
+ * 
+ * @param {元胞大小} size 
+ * @param {是否生成划分网格} flag 
+ * @returns 
+ */
+async function init(size=[1,1], flag=true) {
     viewer.terrainProvider = Cesium.createWorldTerrain()
     // viewer.scene.globe.terrainExaggeration = 2
 
     //中间件
-    middleware = new Middleware(viewer, boundingPositions)
+    middleware = new Middleware(viewer)//boundingPositions
 
     // 设置参数
-    middleware.size = [1,1]
+    middleware.size = size
 
-    await middleware.computer();
+    await middleware.computer(flag);
 
-    alert('初始化完成！')
-
+    
+    // alert('初始化完成！')
+    
+    return middleware;
 }
 
 
@@ -174,6 +182,8 @@ function simulateByStep(step) {
     // 时间扩散
     withTime = new WithTime(computerRectangle, new AddRectangle(), new ComputerColor(), surfaceCell, 'simulateOneStep');
     withTime.simulateByStep(step);
+
+    return {withTime, surfaceCell};
 }
 
 

@@ -1,8 +1,9 @@
 #toolbar{
     background: rgba(42, 42, 42, 0.8);
-    padding: 4px;
-    border-radius: 4px;
-    display: flex;
+    padding: 0.6rem;
+    margin: 0.6rem;
+    border-radius: 1.2rem;
+    font-size: 0.7rem;
 }
 
 #toolbar table tr {
@@ -22,7 +23,7 @@
     padding-bottom: 2px;
 }
 
-#toolbar p{
+#toolbar p, span{
     padding-left: 5px;
     /* padding-top: 10px; */
 }
@@ -95,4 +96,9 @@
     display: inline-block;
     vertical-align: middle;
     border-radius: 4px;
+}
+
+.xl-right-buttom{
+    position: absolute;
+    right: 1.2rem;
 }

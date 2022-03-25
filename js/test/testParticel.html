@@ -21,7 +21,9 @@
     <script>
         const viewer = new Cesium.Viewer("cesiumContainer", {
             shouldAnimate: true,
+            animation: false,
         });
+        viewer._cesiumWidget._creditContainer.style.display = "none";
         const worldPosition = Cesium.Cartesian3.fromDegrees(-75.59777, 40.03883)
         const modelMatrix = Cesium.Transforms.eastNorthUpToFixedFrame(
             worldPosition
@@ -120,10 +122,16 @@
                 transformMatrix[directionVec3] = rotationMatrix;
                 return rotationMatrix
             }
+            // 两向量相反
+            if(angle == Math.PI){
+                const rotationMatrix =  Cesium.Matrix3.fromScale(new Cesium.Cartesian3(1,1,-1), new Cesium.Matrix3());
+                transformMatrix[directionVec3] = rotationMatrix;
+                return rotationMatrix
+            }
             const axis = Cesium.Cartesian3.cross(originVec3, directionVec3, new Cesium.Cartesian3())
             const quaternion = Cesium.Quaternion.fromAxisAngle(axis, angle)
-            const headingPitchRoll = Cesium.HeadingPitchRoll.fromQuaternion(quaternion)
-            const rotationMatrix = Cesium.Matrix3.fromHeadingPitchRoll(headingPitchRoll) 
+            // const headingPitchRoll = Cesium.HeadingPitchRoll.fromQuaternion(quaternion)
+            const rotationMatrix = Cesium.Matrix3.fromQuaternion(quaternion) 
             transformMatrix[directionVec3] = rotationMatrix;
             return rotationMatrix;
         }
@@ -149,16 +157,16 @@
             bursts.push(
                 new Cesium.ParticleBurst({
                     time: Cesium.Math.nextRandomNumber() * 10,
-                    minimum: 100,
-                    maximum: 100,
+                    minimum: 200,
+                    maximum: 200,
                 })
             );
         }
 
         const pollitionOptions = {
             systemOptions: [{
-                    translation: [0, 0],
-                    direction: [[1,1,-1],[1,0,1],[0,0,1],[0,1,-1]],
+                    translation: [0, 1, 0],
+                    direction: [[1,1,-1],[0,0,1],[-1,-1,-1]],
                 }, 
                 // {
                 //     translation: [1, 1],
@@ -188,9 +196,9 @@
                 },
                 {
                     red: 0.5,
-                    green: 0.5,
-                    blue: 0.7,
-                    alpha: 0.5,
+                    green: 0.8,
+                    blue: 0.6,
+                    alpha: 0.6,
                 },
             ],
         };
@@ -204,10 +212,10 @@
                     direction
                 } = systemOptions[i]
 
-                for (let j = 0; j < direction.length; ++j) {
+                for (let j = 0; j < direction.length; j++) {
                     const emitterModelMatrix = transformFunction(translation, direction[j])
                     const color = Cesium.Color.fromRandom(
-                        options.colorOptions[i % options.colorOptions.length]
+                        options.colorOptions[ j % options.colorOptions.length]
                     );
                     const force = forceFunction(options);
 
@@ -219,13 +227,15 @@
                             particleLife: 3.5,
                             speed: 50.0,
                             imageSize: new Cesium.Cartesian2(17.0, 17.0),
-                            emissionRate: 3,
+                            emissionRate: 100,
                             emitter: new Cesium.ConeEmitter(Cesium.Math.toRadians(20.0)),
                             lifetime: 10,
                             updateCallback: force,
                             modelMatrix: modelMatrix,
                             emitterModelMatrix: emitterModelMatrix,
                             bursts: bursts,
+                            mass:1,
+                            scale:0.8,
                             // loop: false,
                         })
                     );

@@ -19,12 +19,12 @@ class Splite extends Dispose {
         [118.7440610544440, 32.2503070328395],
         [118.7434864037540, 32.2510766586447],
         [118.7432226284700, 32.2509838788282],
-    ]) {
+    ],rectangle, rectangleCellDao, recdaos) {
         super()
         this._boundingPositions = boundingPositions
-        this._rectangle = undefined //包圍盒邊界矩形
-        this._rectangleCellDao = undefined
-        this._recdaos = undefined
+        this._rectangle = rectangle //包圍盒邊界矩形
+        this._rectangleCellDao = rectangleCellDao
+        this._recdaos = recdaos
         this._x = 10
         this._y = 10
         this._extendX = extendX
@@ -32,7 +32,16 @@ class Splite extends Dispose {
         this._recClip = undefined;
         this._xlbox = new XLBox();
         this._boundingBox = undefined; //包围盒entities
+        this._hNumber = 0; //包气带z方向的网格数量
 
+    }
+
+    get hNumber(){
+        return this._hNumber;
+    }
+
+    get cellSize(){
+        return this._x + ''+ this._y;
     }
 
     /**
@@ -47,8 +56,8 @@ class Splite extends Dispose {
         let heightMatrix;
         let waterMatrix;
         if (mark === rectangleCellDao.toString()) {
-            heightMatrix = JSON.parse(localStorage.getItem(mark+'heightMatrix'))
-            waterMatrix = JSON.parse(localStorage.getItem(mark+'waterMatrix'))
+            heightMatrix = JSON.parse(localStorage.getItem(m+'heightMatrix'))
+            waterMatrix = JSON.parse(localStorage.getItem(m+'waterMatrix'))
 
         } else {
             ({
@@ -243,6 +252,53 @@ class Splite extends Dispose {
         };
     }
 
+    /**
+     * 求二维数组的最大值最小值
+     * @param 二维数组{} matrix
+     * ，fun max || min 
+     * @returns 最大小值
+     */
+    maxmin(matrix, fun = 'max') {
+        let arr = matrix.map(element => {
+            return Math[fun].apply(null, element)
+        })
+        let res = Math[fun].apply(null, arr)
+        return res;
+    }
+
+     /**
+     * 
+     * @param {最大高度} max 
+     * @param {小} min 
+     * @param {一个网格高度} zlength 
+     * @returns 网格数量
+     */
+    getHNumber(max, min, zlength) {
+        const h = Math.floor((max - min) / zlength) + 1
+        this._hNumber = h;
+        return h;
+    }
+
+
+    // 水位矩阵加工预处理
+    doWaterMatrix(waterMatrix,value){
+        for(let i=0;i<waterMatrix.length ;i++){
+            const water = waterMatrix[i];
+            for(let j=0; j< water.length; j++){
+                water[j] += value;
+            }
+        }
+    }
+    
+    lookAt(){
+        const centerCar = Cesium.Rectangle.center(this._rectangle, new Cesium.Cartographic());
+        const res = Cesium.Cartographic.toCartesian(centerCar, Cesium.Ellipsoid.WGS84, new Cesium.Cartesian3())
+        viewer.camera.lookAt(res, new Cesium.Cartesian3(0.0, -200, 200.0));
+    }
+
+    cancleLookAt(){
+        viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY) ;
+    }
 }
 
 export default Splite
