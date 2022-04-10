@@ -101,6 +101,7 @@ class Entity{
         this.overlayLayer.show = flag;
         this.iconLayer.show = flag;
     }
+
 }
 
 export default Entity

@@ -2,4 +2,5 @@
     "git.ignoreLimitWarning": true,
     "liveServer.settings.CustomBrowser": "chrome",
     "liveServer.settings.AdvanceCustomBrowserCmdLine": "F:\\Google\\Chrome\\Application\\chrome.exe",
+    "open-in-browser.default": "F:\\Google\\Chrome\\Application\\chrome.exe",
 }

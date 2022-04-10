@@ -191,7 +191,7 @@ class VadoseZoneCell {
      * @returns 土壤体积含水率
      */
     _setMoistureContent(cell) { //waterLevelValue
-        let h = cell.waterLevel;
+        let h = cell.waterLevel < 0 ? 0 : cell.waterLevel;
         let fm1 = 1 + Math.pow(this._paramW * h, this._paramN)
         let fm = Math.pow(fm1, this._paramM)
         let res =  this._moistureContentR + (this._moistureContentS - this._moistureContentR) / fm
@@ -205,8 +205,8 @@ class VadoseZoneCell {
      */
     _setPermeabilityCoeff(spreadAreaGrid) {
         let permeabilitySe = (spreadAreaGrid.moistureContent - this._moistureContentR) / (this._moistureContentS - this._moistureContentR)
-        spreadAreaGrid.permeabilityCoeff = this._permeabilityKS * Math.pow(permeabilitySe, 0.5) * Math.pow(1 - Math.pow(1 - Math.pow(permeabilitySe, 1 / this._paramM), this._paramM), 2)
-        // if(!spreadAreaGrid.permeabilityCoeff) console.log(spreadAreaGrid.permeabilityCoeff);
+        spreadAreaGrid.permeabilityCoeff = this._permeabilityKS * Math.pow(permeabilitySe, 0.5) * Math.pow(1 - Math.pow(1 - Math.pow(permeabilitySe, 1 / this._paramM), this._paramM), 2);
+        
     }
 
     /**
@@ -254,13 +254,14 @@ class VadoseZoneCell {
         let timeStep = 0
         let spreadArea = this.spreadArea[i][j][k]
         const centerWaterLevel = spreadArea.waterLevel
+
         for (let m = k1; m < k2 + 1; m++) {
             for (let n = t1; n < t2 + 1; n++) {
                 const waterLevel = this.spreadArea[m][n][k].waterLevel
 
-                if (waterLevel > centerWaterLevel) { //当前水头压力更低
+                if (waterLevel < centerWaterLevel) { //当前水头压力更低
                     let distanceObj = this._judgeDistance(i, j, m, n)
-                    let slop = (-centerWaterLevel + waterLevel) / distanceObj.distance
+                    let slop = (centerWaterLevel - waterLevel) / distanceObj.distance
                     // if (!spreadArea.lessWaterCells.includes([m, n, k])) { //注意v1，只会流向，流向元胞的底部的的元胞
                     let speed = spreadArea.permeabilityCoeff * slop / spreadArea.moistureContent
                     let time = distanceObj.distance / speed
@@ -278,7 +279,7 @@ class VadoseZoneCell {
                     })
                     // 加入当前元胞的底部
                     let distance = Math.sqrt(Math.pow(distanceObj.distance, 2) + Math.pow(this._cellZ, 2))
-                    slop = (-centerWaterLevel + this.spreadArea[m][n][v2].waterLevel) / distance
+                    slop = (centerWaterLevel - this.spreadArea[m][n][v2].waterLevel) / distance
                     speed = spreadArea.permeabilityCoeff * slop / spreadArea.moistureContent
                     time = distanceObj.distance / speed
                     kshu = speed / distance
@@ -319,6 +320,8 @@ class VadoseZoneCell {
             'kshu':kshu,
             'direction':0,
         })
+        spreadArea.cellDistance = this._cellZ;
+
         // }
         return {
             'cellSlop': cellSlop,
@@ -336,6 +339,7 @@ class VadoseZoneCell {
     _setK(lessWaterCells, kshuAll) {
         for (const lessWater of lessWaterCells) {
             lessWater.k = lessWater.kshu / kshuAll
+           
         }
     }
 
@@ -381,7 +385,7 @@ class VadoseZoneCell {
             return
         }
         // 判断质量是否小于阈值
-        if(Math.abs(mass) < this._massThreshold){//小于阈值，不发生扩散
+        if( mass < this._massThreshold){//小于阈值，不发生扩散
             return;
         }
 
@@ -389,10 +393,10 @@ class VadoseZoneCell {
         if (mass > 0 && !currentCell.isPolluted) {
             currentCell.isPolluted = true
             this.nextPollutedArea.push(currentCell)
-            // this.isPollutedArea.push(currentCell)
-            this._orderInsert(this.isPollutedArea, currentCell, 'cellMass') //递减插入
+            this.isPollutedArea.push(currentCell)
             this.spreadArea[position2[0]][position2[1]][position2[2]].fatherNode = position1
         }
+        
         //限制质量为负的情况，更新质量
         if (currentCell.cellMass + mass > 0) {
             currentCell.cellMass += mass
@@ -445,7 +449,8 @@ class VadoseZoneCell {
                 if(element.direction === 1){
                     md = this._m * this._d
                 }
-                let mass = md *element.k *(currentCell.cellMass - spreadArea.cellMass)
+                let mass = md *element.k *(currentCell.cellMass - spreadArea.cellMass);
+                if(!md) debugger;
                 
                 // 判断质量是否小于阈值
                 if(mass < this._massThreshold){//小于阈值，不发生扩散
@@ -456,14 +461,13 @@ class VadoseZoneCell {
                 allTime += element.time
 
                 // 判断是否到达潜水层，若到达将质量输出到潜水层
-                if (this._isVadoseCell(element.position)) {
-                    this._updateCellMassOneStep(currentCell.position, element.position, mass)
-                }else{
+                this._updateCellMassOneStep(currentCell.position, element.position, mass)
+                if (element.position[2] === this._heights-2) {
                     this._outGdwater.push([element.position[0], element.position[1], mass]);
                 }
             }
             //更新质量
-            this._updatePollutedState(currentCell, outMass)
+            currentCell.cellMass = currentCell.cellMass + outMass > 0 ? currentCell.cellMass + outMass: 0;
             //更新平均扩散时间
             currentCell.averageTime = allTime / currentCell.lessWaterCells.length 
         }
@@ -499,7 +503,7 @@ class VadoseZoneCell {
             let goalCellPosition = currentCell.waterFlow
             let [x,y,z] = currentCell.position
             let [x1,y1,z1] = goalCellPosition
-            let speed = currentCell.cellSlop * currentCell.permeabilityCoeff
+            let speed = (currentCell.cellSlop * currentCell.permeabilityCoeff) || currentCell.permeabilityCoeff
             let speedX = speed * this._cellX * Math.abs(x1-x) / currentCell.cellDistance
             let speedY = speed * this._cellY * Math.abs(y1-y) / currentCell.cellDistance
             let speedZ = speed * this._cellZ * Math.abs(z1-z) / currentCell.cellDistance
@@ -534,13 +538,15 @@ class VadoseZoneCell {
         let wy = mechanicalCoeffXY * densityX + mechanicalCoeffY * densityY + mechanicalCoeffYZ * densityZ
         let wz = mechanicalCoeffXZ * densityX + mechanicalCoeffYZ * densityY + mechanicalCoeffZ * densityZ
         // 弥散质量分量
-        let cellMassX = wx * this._cellY* this._cellZ * this.timeStep
-        let cellMassY = wy * this._cellX* this._cellZ * this.timeStep
-        let cellMassZ = wz * this._cellY* this._cellX * this.timeStep
+        let cellMassX = wx * this._cellY* this._cellZ * currentCell.timeStep
+        let cellMassY = wy * this._cellX* this._cellZ * currentCell.timeStep
+        let cellMassZ = wz * this._cellY* this._cellX * currentCell.timeStep
         // 更新质量
         this._updatePollutedState(cellX, cellMassX, p1 , position)
         this._updatePollutedState(cellY, cellMassY, p2 , position)
         this._updatePollutedState(cellZ, cellMassZ, p3 , position)
+
+        currentCell.cellMass -= (cellMassX  + cellMassY + cellMassZ);
      
     }
 

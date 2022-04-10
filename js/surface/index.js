@@ -1,16 +1,12 @@
 import SurfaceCell from "../cells/SurfaceCell.js";
 import PollutedCellDao from "../Dao/PollutedCellDao.js";
-import RectangleCellDao from "../Dao/RectangleCellDao.js";
+
 import WithTime from "./withTime.js";
-import BoundingBox from "../utils/base/BoundingBox.js";
-import BoundingRectangle from "../utils/base/BoundingRectangle.js";
+
 import ComputerColor from "../utils/computer/ComputerColor.js";
-import ComputerRectangle from "../utils/computer/ComputerRectangles.js";
-import RectangleClip from "../utils/dispose/RectangleClip.js";
+;
 import AddRectangle from "../utils/entity/AddRectangle.js";
-import BaiduImageryProvider from "../utils/imagery/provider/BaiduImageryProvider.js";
-import TencentImageryProvider from "../utils/imagery/provider/TencentImageryProvider.js";
-import HeightMatrix from "../utils/transform/HeightMatrix.js";
+;
 import Middleware from "./middleware.js";
 
 
@@ -27,6 +23,11 @@ let boundingPositions = [
     [118.74349086211912, 32.24907215014732],
 ];
 
+const xlParma = {
+    boundingPositions : false, //边界采样点
+    divisionColor: 'rgb(1,0,0)',//划分的小矩形的css颜色
+    terrainExagNumber: 1,//地形夸张程度
+}
 
 /**
  * 
@@ -34,12 +35,12 @@ let boundingPositions = [
  * @param {是否生成划分网格} flag 
  * @returns 
  */
-async function init(size=[1,1], flag=true) {
+async function init(size=[0.5,0.5], flag=true) {
     viewer.terrainProvider = Cesium.createWorldTerrain()
     // viewer.scene.globe.terrainExaggeration = 2
 
     //中间件
-    middleware = new Middleware(viewer)//boundingPositions
+    middleware = new Middleware(viewer, boundingPositions)//boundingPositions
 
     // 设置参数
     middleware.size = size
@@ -72,16 +73,19 @@ function main(isSleep = true, number, time) {
     }
 
     surfaceCell = new SurfaceCell(matrix, rectangleCellDao.xNumber, rectangleCellDao.yNumber, rectangleCellDao.length, rectangleCellDao.width);
-    let pollutedCellDao = new PollutedCellDao([Math.floor(rectangleCellDao.xNumber / 2), Math.floor(rectangleCellDao.yNumber / 2)], 100);
+    let pollutedCellDao = new PollutedCellDao(
+        [Math.floor(rectangleCellDao.xNumber / 2), Math.floor(rectangleCellDao.yNumber / 2)],
+        1000);
     surfaceCell.setPollutedSourceCell(
         pollutedCellDao.position[0], pollutedCellDao.position[1], pollutedCellDao.originMass
     )
 
     // 设置参数
     surfaceCell.setRain(rain, raintime, rainout);
-    surfaceCell.verKdiff = 3.96
-    surfaceCell.fre = 0.8274;
-    // surfaceCell.n = 0.012;
+    // surfaceCell.verKdiff = 3.96;
+    surfaceCell.verKdiff = 0;
+    // surfaceCell.fre = 0.8274;
+    surfaceCell.n = 0.012;
     surfaceCell.isRain = true;
 
 
@@ -188,7 +192,6 @@ function simulateByStep(step) {
 
 
 
-
 $('#init').click(function (e) {
     e.preventDefault();
     init();
@@ -220,8 +223,8 @@ $('#reset').click(function (e) {
     if (withTime) {
         withTime.clearAll();
     }
-    withTime = null;
-    surfaceCell = null;
+    // withTime = null;
+    // surfaceCell = null;
     viewer.dataSources.removeAll();
 });
 $('#simulate-with-time').click(function (e) {
@@ -230,7 +233,7 @@ $('#simulate-with-time').click(function (e) {
 });
 $('#time-range').change(function (e) {
     e.preventDefault();
-    $('#time-text').val($(this).val())
+    $('#time-text').val($('#number-text').val())
 });
 $('#number-range').change(function (e) {
     e.preventDefault();
@@ -243,7 +246,8 @@ $('#simulate-with-number').click(function (e) {
 $('#set-rain-param').click(function (e) {
     e.preventDefault();
     if (surfaceCell) {
-        surfaceCell.setRain($('#rain-text').val(), $('#rain-time-text').val(), $('#rain-out-text').val())
+        let time =  Number( $('#rain-time-text').val())
+        surfaceCell.setRain($('#rain-text').val(), time / 60, $('#rain-out-text').val())
         alert('修改成功！')
     }
 })
@@ -270,3 +274,32 @@ $('#random-color').click(function (e) {
     e.preventDefault();
     withTime.randomColor();
 });
+
+$('#is-clip').click(function (e) {
+    if(middleware){
+        middleware.enableClip($(this).children("input").prop('checked'));
+    }
+  
+});
+
+Cesium.knockout.track(xlParma);
+const xlbar = document.getElementById("xl-bar");
+Cesium.knockout.applyBindings(xlParma, xlbar);
+Cesium.knockout
+  .getObservable(xlParma, "boundingPositions")
+  .subscribe(function (newValue) {
+    middleware.drawPoints(Boolean(newValue));
+  });
+
+  Cesium.knockout
+  .getObservable(xlParma, "divisionColor")
+  .subscribe(function (newValue) {
+    let color = Cesium.Color.fromCssColorString(newValue)
+    middleware.changeDivisionColor(color);
+  });
+  Cesium.knockout
+  .getObservable(xlParma, "terrainExagNumber")
+  .subscribe(function (newValue) {
+    viewer.scene.globe.terrainExaggeration = Number(newValue);
+  });
+  

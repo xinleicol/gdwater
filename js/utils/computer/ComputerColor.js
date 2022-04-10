@@ -155,6 +155,25 @@ class ComputerColor extends Computer{
         }
     }
 
+
+     /**
+     * 耦合扩散
+     * @param {被污染的元胞对象数组} spreadCells 
+     */
+    setColorToCellCoupling(surfaceCells, vadoseCells, gdwaterCells){
+        const arr = [...surfaceCells, ... vadoseCells, ...gdwaterCells];
+        arr.sort((a,b) => b.cellMass - a.cellMass);
+        let sc = Cesium.Cartesian4.fromColor(this._startCor, new Cesium.Cartesian4()) 
+        let ec = Cesium.Cartesian4.fromColor(this._endCor, new Cesium.Cartesian4()) 
+        for (let i = 0; i < arr.length; i++) {
+            let radio = 1- i  / (arr.length-1); 
+            let fc = Cesium.Cartesian4.lerp(sc, ec, radio, new Cesium.Cartesian4())
+            let fcc = Cesium.Color.fromCartesian4(fc, new Cesium.Color())
+            arr[i].color = fcc;
+        }
+        return arr;
+    }
+
     /**
      * 根据污染物质量划分成不同颜色
      * @param {被污染的元胞对象数组} spreadCells 

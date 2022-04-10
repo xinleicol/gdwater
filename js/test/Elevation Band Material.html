@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no"
+    />
+    <meta name="description" content="Apply elevation band material to the globe.">
+    <meta name="cesium-sandcastle-labels" content="Showcases">
+    <title>Cesium Demo</title>
+    <script type="text/javascript" src=".././source/Sandcastle-header.js"></script>
+    <script
+      type="text/javascript"
+      src="../../CesiumUnminified/Cesium.js"
+      
+    ></script>
+
+    <link rel="stylesheet" href="../../css/bucket.css">
+
+  </head>
+  <body
+    class="sandcastle-loading"
+    data-sandcastle-bucket="bucket-requirejs.html"
+  >
+<style>
+    </style>
+    <div id="cesiumContainer" class="fullSize"></div>
+    <div id="loadingOverlay"><h1>Loading...</h1></div>
+    <div id="toolbar">
+      <table>
+        <tbody>
+          <tr>
+            <td>Background Transparency</td>
+            <td>
+              <input type="range" min="0.0" max="1.0" step="0.01" data-bind="value: backgroundTransparency, valueUpdate: 'input'">
+            </td>
+          </tr>
+          <tr>
+            <td>Band Transparency</td>
+            <td>
+              <input type="range" min="0.0" max="1.0" step="0.01" data-bind="value: bandTransparency, valueUpdate: 'input'">
+            </td>
+          </tr>
+          <tr>
+            <td>Band Thickness</td>
+            <td>
+              <input type="range" min="0.1" max="1" step="0.01" data-bind="value: bandThickness, valueUpdate: 'input'">
+            </td>
+          </tr>
+          <tr>
+            <td>Band 1 Position</td>
+            <td>
+              <input type="range" min="0" max="20" step="0.001" data-bind="value: band1Position, valueUpdate: 'input'">
+            </td>
+            <td>
+              <input type="text" size="1" data-bind="value: band1Position" >
+            </td>
+          </tr>
+          <tr>
+            <td>Band 2 Position</td>
+            <td>
+              <input type="range" min="0" max="20" step="0.001" data-bind="value: band2Position, valueUpdate: 'input'">
+            </td>
+            <td>
+              <input type="text" size="1" data-bind="value: band2Position" >
+            </td>
+          </tr>
+          <tr>
+            <td>Band 3 Position</td>
+            <td>
+              <input type="range" min="0" max="20" step="0.001" data-bind="value: band3Position, valueUpdate: 'input'">
+            </td>
+            <td>
+              <input type="text" size="1" data-bind="value: band3Position" >
+            </td>
+          </tr>
+          <tr>
+            <td>Band 4 Position</td>
+            <td>
+              <input type="range" min="0" max="20" step="0.001" data-bind="value: band4Position, valueUpdate: 'input'">
+            </td>
+            <td>
+              <input type="text" size="1" data-bind="value: band4Position" >
+            </td>
+          </tr>
+          <tr>
+            <td>Band 5 Position</td>
+            <td>
+              <input type="range" min="0" max="20" step="0.001" data-bind="value: band5Position, valueUpdate: 'input'">
+            </td>
+            <td>
+              <input type="text" size="1" data-bind="value: band5Position" >
+            </td>
+          </tr>
+          <tr>
+            <td>Gradient</td>
+            <td>
+              <input type="checkbox" data-bind="checked: gradient">
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <button class="cesium-button" id="init-btn">初始化</button>
+            </td>
+            <td>
+              <button class="cesium-button" id="simulate-btn">扩散</button>
+            </td>
+          </tr>
+          <tr>
+            <td>show cells</td>
+            <td>
+              <input type="checkbox" id="show-cells" checked>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <script id="cesium_sandcastle_script">
+      var viewer;
+function startup(Cesium) {
+    'use strict';
+//Sandcastle_Begin
+Cesium.Ion.defaultAccessToken =
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJhNTg4YmQ0ZC0xNzcyLTRlNDItYjZkMi0zNzc0ODI3N2E2ZjciLCJpZCI6MzI1MjYsImlhdCI6MTYyMjYyMjQxOX0.kUki8CUFlPiIiuwlqIb7TGWmhk6hnlY6gwYViX08tDc';
+
+ viewer = new Cesium.Viewer("cesiumContainer", {
+  terrainProvider: Cesium.createWorldTerrain({
+    requestVertexNormals: true, //Needed to visualize slope
+  }),
+});
+
+viewer.camera.setView({
+  destination: Cesium.Cartesian3.fromDegrees(118.7440610544440, 32.2503070328395,20),
+  orientation: {
+    heading: 4.747266966349747,
+    pitch: -0.2206998858596192,
+    roll: 6.280340554587955,
+  },
+});
+
+const viewModel = {
+  gradient: false,
+  band1Position: 20.0,
+  band2Position: 18.24,
+  band3Position: 17.528,
+  band4Position: 16.098,
+  band5Position: 14.387,
+  bandThickness: 0.1,
+  bandTransparency: 0.5,
+  backgroundTransparency: 0.15,
+  showCells: true,
+};
+
+Cesium.knockout.track(viewModel);
+const toolbar = document.getElementById("toolbar");
+Cesium.knockout.applyBindings(viewModel, toolbar);
+for (const name in viewModel) {
+  if (viewModel.hasOwnProperty(name)) {
+    Cesium.knockout
+      .getObservable(viewModel, name)
+      .subscribe(updateMaterial);
+  }
+}
+
+function updateMaterial() {
+  const gradient = Boolean(viewModel.gradient);
+  const band1Position = Number(viewModel.band1Position);
+  const band2Position = Number(viewModel.band2Position);
+  const band3Position = Number(viewModel.band3Position);
+  const band4Position = Number(viewModel.band4Position);
+  const band5Position = Number(viewModel.band5Position);
+  const bandThickness = Number(viewModel.bandThickness);
+  const bandTransparency = Number(viewModel.bandTransparency);
+  const backgroundTransparency = Number(
+    viewModel.backgroundTransparency
+  );
+
+  const layers = [];
+  const backgroundLayer = {
+    entries: [
+      {
+        height: 11.0,
+        color: new Cesium.Color(0.0, 0.0, 1.0, backgroundTransparency),
+      },
+      {
+        height: 13.0,
+        color: new Cesium.Color(1.0, 1.0, 0.0, backgroundTransparency),
+      },
+      {
+        height: 15.0,
+        color: new Cesium.Color(1.0, 0.0, 0.0, backgroundTransparency),
+      },
+    ],
+    extendDownwards: true,
+    extendUpwards: true,
+  };
+  layers.push(backgroundLayer);
+
+  const gridStartHeight = 4200.0;
+  const gridEndHeight = 8848.0;
+  const gridCount = 50;
+  for (let i = 0; i < gridCount; i++) {
+    const lerper = i / (gridCount - 1);
+    const heightBelow = Cesium.Math.lerp(
+      gridStartHeight,
+      gridEndHeight,
+      lerper
+    );
+    const heightAbove = heightBelow + 10.0;
+    const alpha =
+      Cesium.Math.lerp(0.2, 0.4, lerper) * backgroundTransparency;
+    layers.push({
+      entries: [
+        {
+          height: heightBelow,
+          color: new Cesium.Color(1.0, 1.0, 1.0, alpha),
+        },
+        {
+          height: heightAbove,
+          color: new Cesium.Color(1.0, 1.0, 1.0, alpha),
+        },
+      ],
+    });
+  }
+
+  const antialias = Math.min(10.0, bandThickness * 0.1);
+
+  const colors = [
+    Cesium.Color.fromCssColorString('#FF0000'),
+    Cesium.Color.fromCssColorString('#FFF200'),
+    Cesium.Color.fromCssColorString('#96c93d'),
+    Cesium.Color.fromCssColorString('#00b09b'),
+    Cesium.Color.fromCssColorString('#0575E6'),
+  ]
+
+  if (!gradient) {
+    const band1 = {
+      entries: [
+        {
+          height: band1Position - bandThickness * 0.5 - antialias,
+          color: new Cesium.Color(0.0, 0.0, 1.0, 0.0),
+        },
+        {
+          height: band1Position - bandThickness * 0.5,
+          color:  new Cesium.Color(0.0, 0.0, 1.0, bandTransparency),
+        },
+        {
+          height: band1Position + bandThickness * 0.5,
+          color: new Cesium.Color(0.0, 0.0, 1.0, bandTransparency),
+        },
+        {
+          height: band1Position + bandThickness * 0.5 + antialias,
+          color: new Cesium.Color(0.0, 0.0, 1.0, 0.0),
+        },
+      ],
+    };
+
+    const band2 = {
+      entries: [
+        {
+          height: band2Position - bandThickness * 0.5 - antialias,
+          color: new Cesium.Color(0.0, 1.0, 0.0, 0.0),
+        },
+        {
+          height: band2Position - bandThickness * 0.5,
+          color: new Cesium.Color(0.0, 1.0, 0.0, bandTransparency),
+        },
+        {
+          height: band2Position + bandThickness * 0.5,
+          color: new Cesium.Color(0.0, 1.0, 0.0, bandTransparency),
+        },
+        {
+          height: band2Position + bandThickness * 0.5 + antialias,
+          color: new Cesium.Color(0.0, 1.0, 0.0, 0.0),
+        },
+      ],
+    };
+
+    const band3 = {
+      entries: [
+        {
+          height: band3Position - bandThickness * 0.5 - antialias,
+          color: new Cesium.Color(1.0, 0.0, 0.0, 0.0),
+        },
+        {
+          height: band3Position - bandThickness * 0.5,
+          color: new Cesium.Color(1.0, 0.0, 0.0, bandTransparency),
+        },
+        {
+          height: band3Position + bandThickness * 0.5,
+          color: new Cesium.Color(1.0, 0.0, 0.0, bandTransparency),
+        },
+        {
+          height: band3Position + bandThickness * 0.5 + antialias,
+          color: new Cesium.Color(1.0, 0.0, 0.0, 0.0),
+        },
+      ],
+    };
+
+    const band4 = {
+      entries: [
+        {
+          height: band4Position - bandThickness * 0.5 - antialias,
+          color: new Cesium.Color(1.0, 1.0, 0.0, 0.0),
+        },
+        {
+          height: band4Position - bandThickness * 0.5,
+          color: new Cesium.Color(1.0, 1.0, 0.0, bandTransparency),
+        },
+        {
+          height: band4Position + bandThickness * 0.5,
+          color: new Cesium.Color(1.0, 1.0, 0.0, bandTransparency),
+        },
+        {
+          height: band4Position + bandThickness * 0.5 + antialias,
+          color: new Cesium.Color(1.0, 1.0, 0.0, 0.0),
+        },
+      ],
+    };
+
+    const band5 = {
+      entries: [
+        {
+          height: band5Position - bandThickness * 0.5 - antialias,
+          color: new Cesium.Color(1.0, 0.0, 1.0, 0.0),
+        },
+        {
+          height: band5Position - bandThickness * 0.5,
+          color: new Cesium.Color(1.0, 0.0, 1.0, bandTransparency),
+        },
+        {
+          height: band5Position + bandThickness * 0.5,
+          color: new Cesium.Color(1.0, 0.0, 1.0, bandTransparency),
+        },
+        {
+          height: band5Position + bandThickness * 0.5 + antialias,
+          color: new Cesium.Color(1.0, 0.0, 1.0, 0.0),
+        },
+      ],
+    };
+
+    layers.push(band1);
+    layers.push(band2);
+    layers.push(band3);
+    layers.push(band4);
+    layers.push(band5);
+  } else {
+    const combinedBand = {
+      entries: [
+        {
+          height: band1Position - bandThickness * 0.5,
+          color: colors[0],
+        },
+        {
+          height: band2Position,
+          color:colors[1],
+        },
+        {
+          height: band3Position + bandThickness * 0.5,
+          color: colors[2],
+        },
+        {
+          height: band4Position + bandThickness * 0.5,
+          color: colors[3],
+        },
+        {
+          height: band5Position + bandThickness * 0.5,
+          color: colors[4],
+        },
+      ],
+    };
+
+    layers.push(combinedBand);
+  }
+
+  const material = Cesium.createElevationBandMaterial({
+    scene: viewer.scene,
+    layers: layers,
+  });
+  viewer.scene.globe.material = material;
+}
+
+updateMaterial();
+//Sandcastle_End
+    Sandcastle.finishedLoading();
+}
+if (typeof Cesium !== 'undefined') {
+    window.startupCalled = true;
+    startup(Cesium);
+}
+</script>
+
+<script src="./clip1.js" type="module"></script>
+</body>
+</html>

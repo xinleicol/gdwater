@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no"
+    />
+    <meta name="description" content="User-defined clipping planes applied to a batched 3D Tileset, point cloud, and model.">
+    <meta name="cesium-sandcastle-labels" content="Showcases, 3D Tiles">
+    <title>Cesium Demo</title>
+    <script type="text/javascript" src="../../js/source/Sandcastle-header.js"></script>
+    <script
+      type="text/javascript"
+      src="../../CesiumUnminified/Cesium.js"
+      
+    ></script>
+    <link rel="stylesheet" href="../../css/bucket.css">
+
+  </head>
+  <body
+    class="sandcastle-loading"
+    data-sandcastle-bucket="bucket-requirejs.html"
+  >
+<style>
+      #toolbar {
+        background: rgba(42, 42, 42, 0.8);
+        padding: 4px;
+        border-radius: 4px;
+      }
+      #toolbar input {
+        vertical-align: middle;
+        padding-top: 2px;
+        padding-bottom: 2px;
+      }
+      #toolbar .header {
+        font-weight: bold;
+      }
+    </style>
+    <div id="cesiumContainer" class="fullSize"></div>
+    <div id="loadingOverlay"><h1>Loading...</h1></div>
+    <div id="toolbar">
+      <select data-bind="options: exampleTypes, value: currentExampleType"></select>
+      <input type="checkbox" value="false" data-bind="checked: debugBoundingVolumesEnabled, valueUpdate: 'input'">
+      Show bounding volume
+      <input type="checkbox" value="true" data-bind="checked: edgeStylingEnabled, valueUpdate: 'input'">
+      Enable edge styling
+    </div>
+
+    <script id="cesium_sandcastle_script">
+function startup(Cesium) {
+    'use strict';
+//Sandcastle_Begin
+// Add a clipping plane, a plane geometry to show the representation of the
+// plane, and control the magnitude of the plane distance with the mouse.
+
+const viewer = new Cesium.Viewer("cesiumContainer", {
+  infoBox: false,
+  selectionIndicator: false,
+});
+const scene = viewer.scene;
+
+const clipObjects = ["box"];
+const viewModel = {
+  debugBoundingVolumesEnabled: false,
+  edgeStylingEnabled: true,
+  exampleTypes: clipObjects,
+  currentExampleType: clipObjects[0],
+};
+
+let targetY = 0.0;
+let planeEntities = [];
+let selectedPlane;
+let clippingPlanes;
+
+// Select plane when mouse down
+const downHandler = new Cesium.ScreenSpaceEventHandler(
+  viewer.scene.canvas
+);
+downHandler.setInputAction(function (movement) {
+  const pickedObject = scene.pick(movement.position);
+  if (
+    Cesium.defined(pickedObject) &&
+    Cesium.defined(pickedObject.id) &&
+    Cesium.defined(pickedObject.id.plane)
+  ) {
+    selectedPlane = pickedObject.id.plane;
+    selectedPlane.material = Cesium.Color.WHITE.withAlpha(0.05);
+    selectedPlane.outlineColor = Cesium.Color.WHITE;
+    scene.screenSpaceCameraController.enableInputs = false;
+  }
+}, Cesium.ScreenSpaceEventType.LEFT_DOWN);
+
+// Release plane on mouse up
+const upHandler = new Cesium.ScreenSpaceEventHandler(
+  viewer.scene.canvas
+);
+upHandler.setInputAction(function () {
+  if (Cesium.defined(selectedPlane)) {
+    selectedPlane.material = Cesium.Color.WHITE.withAlpha(0.1);
+    selectedPlane.outlineColor = Cesium.Color.WHITE;
+    selectedPlane = undefined;
+  }
+
+  scene.screenSpaceCameraController.enableInputs = true;
+}, Cesium.ScreenSpaceEventType.LEFT_UP);
+
+// Update plane on mouse move
+const moveHandler = new Cesium.ScreenSpaceEventHandler(
+  viewer.scene.canvas
+);
+moveHandler.setInputAction(function (movement) {
+  if (Cesium.defined(selectedPlane)) {
+    const deltaY = movement.startPosition.y - movement.endPosition.y;
+    targetY += deltaY;
+  }
+}, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+
+function createPlaneUpdateFunction(plane, box) {
+  return function () {
+    plane.distance = targetY;
+    if(targetY < 0 && box.show){
+      box.show = false;
+    }else if(targetY > 0 && !box.show){
+       box.show = true;      
+     }
+    return plane;
+  };
+}
+
+function loadBox(){
+   clippingPlanes = new Cesium.ClippingPlaneCollection({
+    planes: [
+      new Cesium.ClippingPlane(
+        new Cesium.Cartesian3(0.0, 0.0, -1.0),
+        0.0
+      ),
+    ],
+    edgeWidth: viewModel.edgeStylingEnabled ? 1.0 : 0.0,
+  });
+   const position = Cesium.Cartesian3.fromDegrees(
+    -123.0744619,
+    44.0503706,
+    300.0
+  );
+  const entity = viewer.entities.add({
+    position: position,
+    box: {
+      dimensions: new Cesium.Cartesian3(500,500,500),
+      clippingPlanes: clippingPlanes,
+    },
+  });
+   
+  viewer.trackedEntity = entity;
+  
+   for (let i = 0; i < clippingPlanes.length; ++i) {
+    const plane = clippingPlanes.get(i);
+    const planeEntity = viewer.entities.add({
+      position: position,
+      plane: {
+        dimensions: new Cesium.Cartesian2(1000.0, 1000.0),
+        material: Cesium.Color.WHITE.withAlpha(0.1),
+        plane: new Cesium.CallbackProperty(
+          createPlaneUpdateFunction(plane, entity),
+          false
+        ),
+        outline: true,
+        outlineColor: Cesium.Color.WHITE,
+      },
+    });
+
+    planeEntities.push(planeEntity);
+  }
+
+}
+
+loadBox();
+
+
+// Track and create the bindings for the view model
+const toolbar = document.getElementById("toolbar");
+Cesium.knockout.track(viewModel);
+Cesium.knockout.applyBindings(viewModel, toolbar);
+
+Cesium.knockout
+  .getObservable(viewModel, "currentExampleType")
+  .subscribe(function (newValue) {
+    reset();
+    if (newValue === clipObjects[0]) {
+      loadBox();
+    }    
+  });
+
+Cesium.knockout
+  .getObservable(viewModel, "debugBoundingVolumesEnabled")
+  .subscribe(function (value) {
+    if (Cesium.defined(tileset)) {
+      tileset.debugShowBoundingVolume = value;
+    }
+  });
+
+Cesium.knockout
+  .getObservable(viewModel, "edgeStylingEnabled")
+  .subscribe(function (value) {
+    const edgeWidth = value ? 1.0 : 0.0;
+
+    clippingPlanes.edgeWidth = edgeWidth;
+  });
+
+function reset() {
+  viewer.entities.removeAll();
+  planeEntities = [];
+  targetY = 0.0;
+}
+
+//Sandcastle_End
+    Sandcastle.finishedLoading();
+}
+if (typeof Cesium !== 'undefined') {
+    window.startupCalled = true;
+    startup(Cesium);
+}
+</script>
+</body>
+</html>

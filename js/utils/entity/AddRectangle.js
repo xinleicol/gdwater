@@ -66,6 +66,14 @@ class AddRectangle extends Entity {
         this._getEntities();
     }
 
+
+      // 改变所有网格颜色
+      changeColorAll(color){
+        this.entities.map(item => {
+            item.rectangle.outlineColor = color;
+        })
+    }
+
 }
 
 export default AddRectangle

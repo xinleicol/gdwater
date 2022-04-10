@@ -33,6 +33,8 @@ class Middleware extends Computer {
         this._size = [5,5]
         this._isGenerate = false; //是否生成了
         this._recdaos = null;
+        this.type = 'surface';
+        this.xlGeo = null; //类，外面传进来
     }
 
     get recdaos(){
@@ -157,6 +159,21 @@ class Middleware extends Computer {
 
     enableClip(flag) {
         this._recClip.enabled(flag)
+    }
+
+
+      //更新所有污染元胞的颜色
+    updateColor(cells) {
+        this._computerColor.setColorToCell(cells);
+        for (let i = 0; i < cells.length; i++) {
+            const element = cells[i];
+            let idStr = this.type + element.position;
+            this.changeColor(idStr, element.color);
+        }
+    }
+
+    changeColor(id, color) {
+        this.xlGeo.getAndSetBoxEntites(id, color)
     }
 
 }

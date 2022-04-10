@@ -11,6 +11,10 @@ class RectangleCellDao{
         this._unit = '弧度'
         this._ex = ex //向外延伸个数x
         this._ey = ey//向外延伸个数y
+
+        // coupling
+        this.zNumber = 0; //z方向元胞个数
+        this.depth = 0; //z方向长度
     }
 
     get ex(){return this._ex}

@@ -10,19 +10,9 @@ class XLBoxGeometry extends XLBox {
     _centerOffset = null //中心点偏移量
     _dimensions = null
     _offsets = []
-
     _TrailPloyLineColor = undefined //箭头颜色
     trailPloys = new Cesium.EntityCollection() //存放已经生成的流动线实体
     lightingTrailPloys = [] //发光流动线
-    geometry = undefined //盒子样式
-    _boxPrimitives = new Cesium.PrimitiveCollection() //盒子的primitive实体集合
-    _boxPrimitive = undefined //一个primitive
-    attributeStyle = {
-        color: Cesium.ColorGeometryInstanceAttribute.fromColor(Cesium.Color.AQUA)
-    }
-    appearance = new Cesium.PerInstanceColorAppearance({
-        flat: true //使用BoxOutlineGeometry时，要将光照关闭
-    })
     _boxEntities = new Cesium.EntityCollection() //盒子entities
     boxEntitiesStyle = {
         material:  Cesium.Color.AZURE.withAlpha(0.1),//Cesium.Color.AQUA.withAlpha(0.5),
@@ -39,9 +29,7 @@ class XLBoxGeometry extends XLBox {
         super()
         this._centerPoint = centerPoint
         this._dimensions = dimensions
-        if (offsets) {
-            this._offsets = offsets
-        }
+        this._offsets = offsets || new Cesium.Cartesian3();
         this._initModelMatrix(centerPoint)
         addPolylineImageTrailType() //添加流动线材质
         addPolylineLightingTrailType() //添加光线
@@ -54,29 +42,35 @@ class XLBoxGeometry extends XLBox {
         this.computerModelMatrixInverse(centerPosition)
     }
 
+
     /**
-     * 初始化网格模型位置,只能是奇数
-     * @param {模型原点偏移位置} offset 
-     * @param {x方向网格个数} xNum 
-     * @param {y方向网格个数} yNum 
+     * @param {any} d
      */
-    initBoxPosition(offset, xNum, yNum) {
-        this._centerOffset = offset
-        let offsetFinal = Cesium.defaultValue(offset, new Cesium.Cartesian3())
-        let halfXNum = Math.floor(xNum/2)
-        let halfYNum = Math.floor(yNum/2)
-        for (let i = -halfXNum; i < halfXNum + 1; i++) {
-            for (let j = -halfYNum; j < halfYNum + 1; j++) {
-                let x = j * this._dimensions.x + offsetFinal.x
-                let y = i * this._dimensions.y + offsetFinal.y
-                let z = 0 + offsetFinal.z
-                this._offsets.push(new Cesium.Cartesian3(x, y, z))
-            }
-        }
-        return this._offsets
+    set dimensions(d){
+        this._dimensions = d;
+    }
+
+
+     /**
+     * @param {any} o
+     */
+    set offset(o){
+        this.offset = o;
+    }
+
+    /**
+     * @param {any} s
+     */
+    set style(s){
+        Object.assign(this.boxEntitiesStyle, s);
+    }
+
+    get boxEntities(){
+        return this._boxEntities.values;
     }
 
     initBoxPositionUpdate(offset, xNum, yNum) {
+        this._offsets = [];
         this._centerOffset = offset
         let offsetFinal = Cesium.defaultValue(offset, new Cesium.Cartesian3())
         let halfXNum = Math.floor(xNum/2);
@@ -107,34 +101,9 @@ class XLBoxGeometry extends XLBox {
         }
         
     }
-
-    /**
-     * 初始化网格模型位置
-     * @param {模型原点偏移位置} offset 
-     * @param {x方向网格个数} xNum 
-     * @param {y方向网格个数} yNum 
-     * @param {z方向网格个数} zNum 
-     */
-    initBoxPosition3D(offset, xNum, yNum, zNum) {
-        this._centerOffset = offset
-        let offsetFinal = Cesium.defaultValue(offset, new Cesium.Cartesian3())
-        let halfXNum = Math.floor(xNum / 2)
-        let halfYNum = Math.floor(yNum / 2)
-        let halfZNum = Math.floor(zNum / 2)
-        for (let i = -halfXNum; i < halfXNum + 1; i++) {
-            for (let j = -halfYNum; j < halfYNum + 1; j++) {
-                for (let k = -halfZNum; k < halfZNum + 1; k++) {
-                    let x = j * this._dimensions.x + offsetFinal.x //注意网格坐标的i是坐标系中的y
-                    let y = i * this._dimensions.y + offsetFinal.y
-                    let z = k * this._dimensions.z + offsetFinal.z
-                    this._offsets.push(new Cesium.Cartesian3(x, y, z))
-                }
-            }
-        }
-        return this._offsets
-    }
     
     initBoxPosition3DUpdate(offset, xNum, yNum, zNum) {
+        this._offsets = [];
         this._centerOffset = offset
         let offsetFinal = Cesium.defaultValue(offset, new Cesium.Cartesian3())
         let halfXNum = Math.floor(xNum / 2)
@@ -165,63 +134,14 @@ class XLBoxGeometry extends XLBox {
                     let y = j * this._dimensions.y + yChangeValue+ offsetFinal.y
                     let z = k * this._dimensions.z + zChangeValue + offsetFinal.z
                     this._offsets.push({
-                        position:[i+halfXNum, j+halfYNum, halfZNum-k], //和元胞挂钩
+                        position:[i+halfXNum, j+halfYNum, halfZNum-k-1], //和元胞挂钩，从零开始
                         modelPosition:new Cesium.Cartesian3(x, y, z)
                     })
                 }
             }
         }
     }
-    /**
-     * 生成盒子
-     */
-    generate(geometry) {
-        if (this._offsets.length == 0) {
-            throw new Error('请传入一个非空的偏移坐标...')
-        }
 
-        let geometryDefault = Cesium.BoxOutlineGeometry.fromDimensions({
-            dimensions: this._dimensions
-        })
-        this.geometry = Cesium.defaultValue(geometry, geometryDefault)
-
-        let modelMatrix = this.computerModelMatrix(this._centerPoint)
-        let geometryInstances = []
-        for (const offset of this._offsets) {
-            let instance = new Cesium.GeometryInstance({
-                geometry: this.geometry,
-                modelMatrix: Cesium.Matrix4.multiplyByTranslation(
-                    modelMatrix,
-                    offset,
-                    new Cesium.Matrix4()),
-                attributes: this.attributeStyle,
-                id: offset.toString()
-            });
-            geometryInstances.push(instance)
-        }
-
-        // 后面有时间再优化
-        this._boxPrimitive = new Cesium.Primitive({
-            geometryInstances: geometryInstances,
-            appearance: this.appearance
-        })
-        this._boxPrimitives.add(this._boxPrimitive)
-        scene.primitives.add(this._boxPrimitives);
-    }
-
-    // 获取设置元胞的颜色透明度等
-    getAndSetGeometry(position) {
-        XLType.determineCartesian3(position)
-        let attributes = this._boxPrimitive.getGeometryInstanceAttributes(position.toString());
-        attributes.color = Cesium.ColorGeometryInstanceAttribute.toValue(new Cesium.Color(1, 0, 0, 1));
-    }
-
-    removeAllBoxs() {
-        if (this._boxPrimitive) {
-            this._boxPrimitives.remove(this._boxPrimitive)
-            this._boxPrimitive = undefined
-        }
-    }
 
     //生成实体通过viewer.entities的方式
     //type 网格id类型
@@ -230,27 +150,21 @@ class XLBoxGeometry extends XLBox {
             throw new Error('请传入一个非空的偏移坐标...')
         }
 
-        //这样子就只需生成一次，节省性能
-        if (this._boxEntities.values.length > 0) {
-            this._boxEntities.show = true
-            return
-        }
-
         for (const offset of this._offsets) {
             let worldPosition = this.computerWorldPosition(offset.modelPosition,this._modelMatrix)
            
             let box = viewer.entities.add({
+                name:type, //coupling
                 position: worldPosition,
                 box: {
                     dimensions: this._dimensions,
                     ...this.boxEntitiesStyle
                 },
                 id: type?type + offset.position.toString():offset.position.toString(),
+                xlCellPos: offset.position,//自定义属性
             });
             this._boxEntities.add(box)
         }
-        //viewer.entities.add(this._boxEntities)
-        this._boxEntities.show = true 
     }
 
     //隐藏实体
@@ -281,12 +195,20 @@ class XLBoxGeometry extends XLBox {
 
     //更改污染元胞颜色
     getAndSetBoxEntites(id,currentColor){
-        // XLType.determineCartesian3(id)
         Cesium.Check.typeOf.object('currentColor',currentColor)
         let boxEntity = this._boxEntities.getById (id.toString())
         if (boxEntity) {
             boxEntity.box.material = currentColor
             boxEntity.box.show = true
+        }
+    }
+
+
+    //隐藏一部分元素
+    hiddenBoxEntites(id){
+        let boxEntity = this._boxEntities.getById (id.toString())
+        if (boxEntity) {
+            boxEntity.box.show = false;
         }
     }
 

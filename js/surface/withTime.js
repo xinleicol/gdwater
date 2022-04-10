@@ -61,15 +61,17 @@ class WithTime {
                 continue;
             }
             let t = 0;
-            arrs = this._quickSort(arrs, "time");
-            realTime = arrs[arrs.length - 1].time / 60; //实际扩散时间s  
+            // arrs = this._quickSort(arrs, "time");
+            this._sort(arrs, "time");
+
+            realTime = arrs[arrs.length - 1].time * 60;  //分钟
             if (isSleep) { //按照真实时间等待
                 for (const element of arrs) {
                     t = Date.now() - start;
-                    if (t >= element.time * 1000) {
+                    if (t >= element.time * 3600 * 1000) {
                         this._generateRectangle(element);
                     } else {
-                        let interval = element.time * 1000 - t;
+                        let interval = element.time * 3600 * 1000 - t;
                         await this._sleep(element, interval);
                     }
                 }
@@ -78,14 +80,14 @@ class WithTime {
                     for (const element of arrs) {
                         this._generateRectangle(element);
                     }
-                    realTime = arrs[0].time / 60;
+                    realTime = arrs[0].time * 60;
                 } else if (time) {
                     for (const element of arrs) {
-                        if (time * 60 >= element.time) {
+                        if (time >= element.time*60) {
                             this._generateRectangle(element);
                         } else {
-                            realTime = element.time / 60
-                            console.log("扩散时间：" + element.time / 60 + "分钟；推演：" + this._index + "次！");
+                            realTime = element.time * 60
+                            console.log("扩散时间：" + element.time * 60 + "分钟；推演：" + this._index + "次！");
                             break;
                         }
                     }
@@ -109,11 +111,10 @@ class WithTime {
 
             const nextPollutedArea = this._cellObj[this._funName]();
             stack.push(nextPollutedArea);
-            this._index++;
+            this._index++; 
 
 
         }
-        alert("扩散结束！");
     }
 
 
@@ -129,7 +130,7 @@ class WithTime {
             if (arrs.length == 0) {
                 continue;
             }
-            arrs = this._quickSort(arrs, "time");
+            arrs = this._sort(arrs, "time");
             realTime = arrs[arrs.length - 1].time / 60;
             for (const element of arrs) {
                 if (time * 60 >= element.time) {
@@ -156,10 +157,10 @@ class WithTime {
     _updateColor(spreadCells) {
         // this._computerColor.startColor = Cesium.Color.fromCssColorString("#0b486b", new Cesium.Color());
         // this._computerColor.endColor = Cesium.Color.fromCssColorString("#f56217", new Cesium.Color());
-        // this._computerColor.startColor = Cesium.Color.ROYALBLUE
-        // this._computerColor.endColor = Cesium.Color.DARKORANGE
-        // this._computerColor.setColorToCell(spreadCells);
-        this._computerColor.setColorToCellWhatever(spreadCells);
+        this._computerColor.startColor = Cesium.Color.ROYALBLUE
+        this._computerColor.endColor = Cesium.Color.DARKORANGE
+        this._computerColor.setColorToCell(spreadCells);
+        // this._computerColor.setColorToCellWhatever(spreadCells);
         for (let i = 0; i < spreadCells.length; i++) {
             const element = spreadCells[i];
             let idStr = this._addRectangle.type + element.position;
@@ -186,6 +187,11 @@ class WithTime {
         return new Promise(resolve => setTimeout(() => {
             resolve();
         }, ms));
+    }
+
+
+    _sort(arr, attr){
+        arr.sort((a,b) => a[attr] - b[attr]);
     }
 
     // 快排
@@ -217,6 +223,11 @@ class WithTime {
     randomColor() {
         this._computerColor.randomColor2();
         this._updateColor(this._isPollutedArea);
+    }
+
+
+    isShow(f){
+        this._addRectangle.isShow(f);
     }
 }
 

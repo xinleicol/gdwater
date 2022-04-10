@@ -22,13 +22,13 @@ class SurfaceCell {
     _rh = this._xlength / 2;//100/1/876000//this._xlength / 4; //水力半径
     _n = 0.035; //糙率
     _roll = 876000 //g/m3苯的密度
-    _rainStrength = 30.05 //mm/h雨强
+    _rainStrength = 35; //mm/h雨强
     _rainOut = 30 //mm/h雨水下渗率
-    _rainTime = 0.2 //降雨时间h
+    _rainTime = 10/60 //降雨时间h
     _rainRh = 0.01;//(this._rainStrength - this._rainOut) * this._rainTime / 1000 //m
     _fre = 0.8274 //雷诺数转化系数
     isRain = false; //是否降雨
-    _massThreshold = 1.4e-3 //g
+    _massThreshold = 0;//1.4e-3 //g
     constructor(heightMatrix, rows, columns,xlength,ylength) {
         if (!heightMatrix & !rows & !columns) {
             return
@@ -74,7 +74,7 @@ class SurfaceCell {
 
     setRain(rain,raintime,rainOut){
         this._rainStrength = rain || 30.05;
-        this._rainTime = raintime || 0.2;
+        this._rainTime = raintime || 0.2; //化成小时
         this._rainOut = rainOut || 30;
     }
     /**
@@ -106,7 +106,8 @@ class SurfaceCell {
                     "color":'green',//默认颜色值
                     "waiting":false, //是否在等待被污染
                     'isParticle':false, //是否生成过粒子系统
-                    'speed':0, //当前网格的扩散速度
+                    'speed':0, //当前网格的扩散速度,
+                    'concen':0,//浓度
 
                 }
                 if (i == 0) {
@@ -291,17 +292,21 @@ class SurfaceCell {
                         this.nextNotPollutedCells.push(this.spreadArea[m][n]);
                     }
 
-                    // 向下渗入土壤
-                    let massD = this.spreadArea[m][n].oneTime*this.verKdiff * this._xlength * this._ylenght * this._roll;
-                    this.verMass = massD;
+                   
                 }
 
                 k++
             }
         }
 
-        let newMass = (centerMass + crossMass + inclineMass);
-        this.spreadArea[i][j].cellMass = newMass
+         // 向下渗入土壤
+        let cellMass = this.spreadArea[i][j].cellMass;
+        let massD = this.spreadArea[i][j].oneTime* this.verKdiff * cellMass;
+        massD = massD > cellMass ? cellMass : massD;
+        this.verMass = massD;
+
+        let newMass = (centerMass + crossMass + inclineMass - massD);
+        this.spreadArea[i][j].cellMass  = newMass > 0 ? newMass :  0;
         // return this.nextPollutedArea;
         return this.nextNotPollutedCells;
     }
@@ -487,6 +492,8 @@ class SurfaceCell {
 
         // 排序
         this.isPollutedArea.sort((a,b)=>b.cellMass-a.cellMass);
+
+        // console.log('最大质量为:' + this.isPollutedArea[0].cellMass)
 
         return this.nextNotPollutedCells;
     }

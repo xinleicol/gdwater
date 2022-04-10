@@ -8,7 +8,12 @@ import AddRectangle from "../utils/entity/AddRectangle.js";
 import HeightMatrix from "../utils/transform/HeightMatrix.js";
 
 class Middleware extends Computer {
-    
+
+    stripeMaterial = new Cesium.StripeMaterialProperty({
+        evenColor: Cesium.Color.WHITE.withAlpha(0.5),
+        oddColor: Cesium.Color.BLUE.withAlpha(0.5),
+        repeat: 5.0,
+    });
     constructor(viewer, boundingPositions =[
         [118.7436, 32.24981],
         [118.74304, 32.25009],
@@ -130,6 +135,40 @@ class Middleware extends Computer {
      */
     clearAll(){
         this._addRectangle.clearAll();
+    }
+
+
+    enableClip(flag) {
+        if(this._recClip){
+            this._recClip.enabled(flag)
+        }
+    }
+
+
+    // 绘制采样点
+    drawPoints(show){
+        if(this._boundingPolygon){
+            this._boundingPolygon.show = show;
+            return;
+        }
+        let arr = this.boundingPositions.flat();
+        this._boundingPolygon = viewer.entities.add({
+            polygon: {
+              hierarchy: new Cesium.PolygonHierarchy(
+                Cesium.Cartesian3.fromDegreesArray(arr)
+              ),
+              outline: true,
+              outlineColor: Cesium.Color.WHITE,
+              outlineWidth: 10,
+              material: Cesium.Color.DEEPSKYBLUE,
+              height:0,
+            },
+          });
+    }
+
+    // 改变所有网格颜色
+    changeDivisionColor(color){
+        this._addRectangle.changeColorAll(color);
     }
 
 

@@ -11,15 +11,12 @@ class ComputerVadoseDao extends Computer {
 
     DEF_STYLE = {
         show: false,
-        // material: Cesium.Color.ORANGE.withAlpha(0.5),
-        // outline: true,
-        // outlineColor: Cesium.Color.BLACK,
     }
     constructor(rectangle, xs, ys, zs, depth) {
         super()
         this._rec = rectangle
         this._vd = new VadoseDao(
-            undefined, undefined, undefined, ys, xs, zs, depth //默认深度500米 
+            undefined, undefined, undefined, ys, xs, zs, depth 
         )
         this._modelMatrix = undefined
         this._dimensions = undefined
@@ -34,6 +31,10 @@ class ComputerVadoseDao extends Computer {
 
     }
 
+    set type(t){
+        this._type = t;
+    }
+
     get type() {
         return this._type
     }
@@ -42,14 +43,28 @@ class ComputerVadoseDao extends Computer {
         return this._dimensions
     }
 
+    set dimensions(d){
+        this._dimensions = d;
+    }
+
     get offset() {
         return this._offset
     }
 
+    set offset(o){
+        this._offset = o;
+    }
+    
     get vadoseDao() {
         return this._vd
     }
 
+    /**
+     * @param {any} x
+     */
+    set xlGeo(x){
+        this._xlGeo = x;
+    }
     
 
     /**随机改变调色板
@@ -67,6 +82,16 @@ class ComputerVadoseDao extends Computer {
         for (let i = 0; i < cells.length; i++) {
             const element = cells[i];
             let idStr = this.type + element.position;
+            this.changeColor(idStr, element.color);
+        }
+    }
+
+    //更新所有污染元胞的颜色
+    updateColorCoupling(surfaceCells=[], vadoseCells=[], gdwaterCells=[]) {
+        const cells = this._computerColor.setColorToCellCoupling(surfaceCells, vadoseCells, gdwaterCells);
+        for (let i = 0; i < cells.length; i++) {
+            const element = cells[i];
+            let idStr = element.name + element.position;
             this.changeColor(idStr, element.color);
         }
     }
@@ -94,7 +119,7 @@ class ComputerVadoseDao extends Computer {
     }
 
     generate(ownStyle) {
-        this._xlGeo ? false : this._xlGeo = new XLBoxGeometry(this._center, this._dimensions);
+        this._xlGeo ? true : this._xlGeo = new XLBoxGeometry(this._center, this._dimensions);
         ownStyle ? Object.assign(this._xlGeo.boxEntitiesStyle, this.DEF_STYLE) : true
         this._xlGeo.initBoxPosition3DUpdate(this._offset, this._vd.xNumber,
             this._vd.yNumber, this._vd.hNumber)

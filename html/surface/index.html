@@ -6,11 +6,10 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
-    <script src="../../CesiumUnminified/Cesium.js"></script>
     <!-- <script src="https://cesium.com/downloads/cesiumjs/releases/1.89/Build/Cesium/Cesium.js"></script> -->
     <link rel="stylesheet" href="../../CesiumUnminified/Widgets/widgets.css">
     <link rel="stylesheet" href="../../css/bucket.css">
-    <script src="../../js/source/jquery-3.6.0.min.js"></script>
+    
     <style>
         .xl-bac {
             position: relative;
@@ -39,7 +38,7 @@
 
 <body>
     <div id="cesiumContainer" class="fullSize"></div>
-    <div class="toolbar">
+    <div>
         <div class="cesium-button" id="set-view">Set view</div>
         <div class="cesium-button" id="reset">Reset</div><br>
         <div class="cesium-button" id="init">Init</div>
@@ -50,8 +49,8 @@
             <div class="xl-bac" >
                 <span>Rain (mm/h)</span>
                 <input type="text" value="35" id="rain-text" size="1">
-                <span>Rain time(h)</span>
-                <input type="text" value="0.2" id="rain-time-text" size="1">
+                <span>Rain time(min)</span>
+                <input type="text" value="10" id="rain-time-text" size="1">
                 <span>Rain out(mm/h)</span>
                 <input type="text" value="30" id="rain-out-text" size="1">
             </div>
@@ -83,6 +82,10 @@
         <div class="cesium-button" id="show-terrain">
             <input type="checkbox" name="" id="" checked>
             Terrain
+        </div>
+        <div class="cesium-button" id="is-clip">
+            <input type="checkbox" name="" id="" checked>
+            Clip
         </div><br>
     
         <div>
@@ -103,7 +106,33 @@
         </div>
 
         <div class="cesium-button" id="random-color">Random color</div>
+    
     </div>
+
+    <div id="xl-bar" class="xl-bac">
+        <table>
+            <tr>
+                <td>
+                    <input type="checkbox" data-bind="checked: boundingPositions">
+                </td>
+                <td>采样点</td>  
+            </tr>
+            <tr>
+                <td> <input type="text" data-bind="value: divisionColor" size="6"></td>
+                <td>划分颜色</td>
+            </tr>
+            <tr>
+                <td>
+                    <input type="range" min="1" max="10" step="1" value="1" data-bind="value: terrainExagNumber, valueUpdate: 'input'">
+                    <input type="text" data-bind="value: terrainExagNumber" size="1">
+                </td>
+                <td>地形夸张</td>  
+            </tr>
+        </table>
+    </div>
+    <script src="../../CesiumUnminified/Cesium.js"></script>
+    <script src="../../js/source/jquery-3.6.0.min.js"></script>
+    <script src="../../js/source/viewerCesiumNavigationMixin.min.js"></script>
     <script>
         var guge = new Cesium.UrlTemplateImageryProvider({
             url: 'http:localhost:5500/proxy/maps/vt?lyrs=s@800&x={x}&y={y}&z={z}', //'http://www.google.cn/maps/vt?lyrs=s@800&x={x}&y={y}&z={z}',
@@ -136,6 +165,10 @@
             timeline: false,
         });
         viewer._cesiumWidget._creditContainer.style.display = "none";
+
+        // 添加控件
+        viewer.extend(Cesium.viewerCesiumNavigationMixin, {});
+
     </script>
     <script type="module" src="../../js/surface/index.js"></script>
 </body>
