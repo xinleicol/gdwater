@@ -24,8 +24,9 @@ const xlParameters = {
     depthTerrainChecked:false, //深度检测
     simluateTime:10, //扩散次数
     simulateState:3,//表示扩散的状态，0为地表，1为土壤，2为地下水，3为整体
-    structureColor:false, //通过颜色来区分是地表、土壤还是潜水面
     showImagery:true,//是否开启影像
+    simulateTimer: false, //是否开启定时器
+    timer:null, //定时器
 
 };
 
@@ -161,6 +162,7 @@ async function initVadoseCell(){
 
     // 生成元胞
     computerVadoseDao.generate(true);
+    // computerVadoseDao.generate(false);
 
     // 元胞类
     const vadoseZoneCell = new VadoseZoneCell(waterMatrix, rectangleCellDao.yNumber,
@@ -298,8 +300,7 @@ function gdwaterSimulate() {
 
     // 更新颜色
     computerVadoseDao.updateColorCoupling(surfaceCell.isPollutedArea, vadoseCell.isPollutedArea, gdwaterCell.isPollutedArea);
-    // computerVadoseDao.updateColorCoupling( gdwaterCell.isPollutedArea);
-    
+    // computerVadoseDao.updateColorCoupling( gdwaterCell.isPollutedArea);   
 }
 
 // 切分函数
@@ -314,59 +315,38 @@ function split(type) {
     const leny = rectangleCellDao.yNumber;
     const lenz = rectangleCellDao.zNumber;
 
+    const numberX = Math.ceil(hiddenRadiox*lenx);
+    const numberY = Math.ceil(hiddenRadioy*leny);
+    const numberZ = Math.ceil(hiddenRadioz*lenz);
+
      // 全部显示
     for (let i = 0; i < xlGeo.boxEntities.length; i++) {
         const box = xlGeo.boxEntities[i];
         box.show = true;  
     }
 
-    if(type === 'x'){
-
-        // 计算比例
-        const number = Math.ceil(hiddenRadiox*lenx);
-        if(number === 0) return;
-
-        // 隐藏
-        const boxEntities = xlGeo.boxEntities.filter(entity => entity.xlCellPos[0] < number);
-        for (let i = 0; i < boxEntities.length; i++) {
-            const box = boxEntities[i];
-            box.show = false; 
-        }
-    }else if(type === 'y'){
-
-        // 计算比例
-        const number = Math.ceil(hiddenRadioy*leny);
-        if(number === 0) return;
-
-        // 隐藏
-        const boxEntities = xlGeo.boxEntities.filter(entity => entity.xlCellPos[1] < number);
-        for (let i = 0; i < boxEntities.length; i++) {
-            const box = boxEntities[i];
-            box.show = false; 
-        }
-    }else if(type === 'z'){
-        // 计算比例
-        const number = Math.ceil(hiddenRadioz*lenz);
-        if(number === 0) return;
-
-        const filterFun = function (entity) {
-            if(number === 1){
-                return entity.name === outerNames.surfaceType;
-            }else if(number === lenz){
-                return true;
-            }else{
-                return (entity.xlCellPos[2] + 2) < number || entity.name === outerNames.surfaceType;
-            }
-        }
-
-        // 隐藏
-        const boxEntities = xlGeo.boxEntities.filter(filterFun);
-        for (let i = 0; i < boxEntities.length; i++) {
-            const box = boxEntities[i];
-            box.show = false; 
-        }
+    // 隐藏
+    const boxEntities = xlGeo.boxEntities.filter((entity) => fiterFunc(entity, numberX, numberY, numberZ, lenz));
+    for (let i = 0; i < boxEntities.length; i++) {
+        const box = boxEntities[i];
+        box.show = false; 
     }
+}
 
+function filterZ(entity, number, lenz) {
+    if(number === 1){
+        return entity.name === outerNames.surfaceType;
+    }else if(number === lenz){
+        return true;
+    }else if(number === 0) {
+        return false
+    }else{
+        return ((entity.xlCellPos[2] + 2) < number || entity.name === outerNames.surfaceType);
+    }
+}
+
+function fiterFunc(entity, numberX, numberY, numberZ, lenz) {
+    return (entity.xlCellPos[0] < numberX) || (entity.xlCellPos[1] < numberY) || (filterZ(entity, numberZ, lenz))
 }
 
 
@@ -404,7 +384,7 @@ function simulate() {
     // const gdwaterCell = outerNames.gdwaterCell;
 
     if(!surfaceCell || !vadoseZoneCell|| !gdwaterCell){
-        alert('请初始化！')
+        console.log('请初始化！')
         return;
     }
 
@@ -424,6 +404,8 @@ $(document).ready(() => {
     $('#simulate').click(simulate) //主程序
 
     $('#selectBoxs').click(function () {
+        const middleware = outerNames.middleware
+        const splite =  outerNames.splite 
         if (!middleware || !splite) {
             alert('请先初始化...')
             $(this).prop('checked', !$(this).prop('checked'))
@@ -445,14 +427,11 @@ $(document).ready(() => {
 $('#reset').click(function (e) { 
     e.preventDefault();
 
-    surfaceCell = undefined //元胞网格对象
-    vadoseZoneCell = undefined //元胞网格对象
-    gdwaterLevelCell = undefined //元胞网格对象
-
-    if(particleMounted){
-        particleMounted.removeAll();
-    }
-    particleMounted = null; //粒子类
+    outerNames.surfaceCell = undefined //元胞网格对象
+    outerNames.vadoseZoneCell = undefined //元胞网格对象
+    outerNames.gdwaterLevelCell = undefined //元胞网格对
+    let splite = outerNames.splite
+    let middleware = outerNames.middleware
 
     time = 0 //计数器
     compeleted = false //初始化指示
@@ -531,13 +510,18 @@ Cesium.knockout
 });
 
 Cesium.knockout
-  .getObservable(xlParameters, "structureColor")
-  .subscribe(function (newValue) {
-        xlParameters.structureColor = Boolean(newValue); 
-});
-Cesium.knockout
   .getObservable(xlParameters, "showImagery")
   .subscribe(function (newValue) {
     viewer.imageryLayers.get(0).show = Boolean(newValue); 
 });
-
+Cesium.knockout
+  .getObservable(xlParameters, "simulateTimer")
+  .subscribe(function (newValue) {
+    if(Boolean(newValue)) {
+        xlParameters.timer = setInterval(() => {
+            simulate()
+        }, 2000)
+    }else {
+        clearInterval(xlParameters.timer)
+    }
+});

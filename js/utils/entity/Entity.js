@@ -99,6 +99,9 @@ class Entity{
     // 是否显示
     isShow(flag){
         this.overlayLayer.show = flag;
+        this.overlayLayer.values.forEach(entitiy => {
+            entitiy.show = flag
+        });
         this.iconLayer.show = flag;
     }
 

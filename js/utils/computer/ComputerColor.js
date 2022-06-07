@@ -9,13 +9,14 @@ class ComputerColor extends Computer{
 
     constructor(currentVal, totalVal){
         super()
-        this._startCor = Cesium.Color.fromCssColorString(color100[0][0])
-        this._endCor = Cesium.Color.fromCssColorString(color100[0][4])
+        this._startCor = Cesium.Color.fromCssColorString(color100[0][0])//.withAlpha(0.6)
+        this._endCor = Cesium.Color.fromCssColorString(color100[0][4])//.withAlpha(0.6)
         this._currentVal = currentVal
         this._totalVal = totalVal;
         this.allMass = 30; //污染物质量总数
         this.massBounding = null;
         this._colors = null; //渐变色条
+        this._r = 0; //随机索引
     }
 
     get colors(){
@@ -84,7 +85,7 @@ class ComputerColor extends Computer{
     
     randomColor2(){
         this.randomColor();
-        this._lerp(this.colors.length);
+        this._lerp(color100[this._r].length);
     }
     
 
@@ -93,6 +94,7 @@ class ComputerColor extends Computer{
      */
      randomColor(){
         let r = Math.floor(Math.random() * 100)
+        this._r = r
         this._startCor = Cesium.Color.fromCssColorString(color100[r][0])
         this._endCor = Cesium.Color.fromCssColorString(color100[r][4])
     }

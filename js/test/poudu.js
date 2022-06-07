@@ -15,7 +15,7 @@ const boundingPositions = [
 ];
 const xlparam = {
     middleware:null,
-    size:[1,1],
+    size:[5,5],
     withTime:null,
 
 }
@@ -54,6 +54,9 @@ function main() {
     let pollutedCellDao = new PollutedCellDao(
         [Math.floor(rectangleCellDao.xNumber / 2), Math.floor(rectangleCellDao.yNumber / 2)],
         1000);
+    // let pollutedCellDao = new PollutedCellDao(
+    //     [14,46],
+    //     1000);
     surfaceCell.setPollutedSourceCell(
         pollutedCellDao.position[0], pollutedCellDao.position[1], pollutedCellDao.originMass
     )
@@ -68,7 +71,7 @@ function main() {
 
     // 时间扩散
     const withTime = new WithTime(computerRectangle, new AddRectangle(), new ComputerColor(), surfaceCell, 'simulateOneStep');
-    withTime.simulateWithTime(false, 18, null);
+    withTime.simulateWithTime(false, 35, null);
 
     xlparam.withTime = withTime;
 }

@@ -59,7 +59,7 @@ async function main(isPause = false, isRandom = false, number = 3) {
 
     // 计算开挖
     splite = new Splite(0, 0, boundingPositions)
-    splite.setCellSize(5, 5)
+    splite.setCellSize(2.0, 2.0)//更改元胞大小
     splite.dispose()
     const [rec, rectangleCellDao, recdaos] = [splite._rectangle, splite._rectangleCellDao, splite._recdaos]
 
@@ -80,7 +80,7 @@ async function main(isPause = false, isRandom = false, number = 3) {
     splite.generateBoundingBox(maxHeight, minWater, false);
 
     // 生成网格
-    let hNumber = getHNumber(maxHeight, minWater, 1)
+    let hNumber = getHNumber(maxHeight, minWater, 1) //更改网格高度
     computerVadoseDao2 = new ComputerVadoseDao(rec, rectangleCellDao.xNumber, rectangleCellDao.yNumber, hNumber, maxHeight - minWater)
     computerVadoseDao2.computer()
     computerVadoseDao2.generate(true)
@@ -224,6 +224,10 @@ $('#pause-main').click(function (e) {
         let f = $(this).children("input").prop('checked')
         func(f);
     }
+});
+$('#terrain-checked').click(function (e) { 
+    viewer.scene.globe.terrainExaggeration = $(this).prop('checked')
+    
 });
 $('#terrain-exag-range').change(function (e) {
     if ($('#terrain-checked').prop('checked')) {

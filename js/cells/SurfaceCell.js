@@ -34,8 +34,8 @@ class SurfaceCell {
             return
         }
         this._heightMatrix = heightMatrix
-        this._rows = Cesium.defaultValue(rows, this._rows)
-        this._columns = Cesium.defaultValue(columns, this._columns)
+        this._rows = Cesium.defaultValue(rows, this._rows) //x
+        this._columns = Cesium.defaultValue(columns, this._columns) //y
         // this._halfGridX = Math.floor(this._columns /2) // 元胞区域X方向半长
         // this._halfGridY = Math.floor(this._rows /2) //元胞区域Y方向半长
         this._xlength = Cesium.defaultValue(xlength, this._xlength);

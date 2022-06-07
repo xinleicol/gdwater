@@ -38,57 +38,57 @@
 <body>
     <div id="cesiumContainer" class="fullSize"></div>
     <div class="toolbar">
-        <div class="cesium-button" id="reset">Reset</div>
-        <div class="cesium-button" id="set-view">Set view</div><br>
-        <div class="cesium-button" id="water">Water</div>
-        <div class="cesium-button" id="mole">Mole</div>
-        <div class="cesium-button" id="water-mole">Water and Mole</div><br>
+        <div class="cesium-button" id="reset">重置</div>
+        <div class="cesium-button" id="set-view">定位</div><br>
+        <div class="cesium-button" id="water">随水流扩散</div>
+        <div class="cesium-button" id="mole">分子扩散</div>
+        <div class="cesium-button" id="water-mole">水流+分子</div><br>
         <div>
             <div class="xl-bac">
-                <span>Seed</span>
+                <span>随机污染源</span>
                 <input type="range" max="10" min="1" step="1" value="2" id="points-number-range">
                 <input type="text" value="2" size="1" id="points-number-text">
             </div>
-            <button class="cesium-button" id="multi-points-water">Water</button>
-            <button class="cesium-button" id="multi-points-mole">Mole</button>
-            <button class="cesium-button" id="multi-points-wm">Water and mole</button>
+            <button class="cesium-button" id="multi-points-water">随水流扩散</button>
+            <button class="cesium-button" id="multi-points-mole">分子扩散</button>
+            <button class="cesium-button" id="multi-points-wm">水流+分子</button>
         </div>
        
         <div class="cesium-button" id="continue-simulate">
             <input type="checkbox" name="" id="" checked>
-            Continue simulate
+            继续
         </div><br>
         <div class="cesium-button" id="show-water-button">
             <input type="checkbox" name="" id="" checked>
-            Show Water
+            地下水位
         </div>
         <div class="cesium-button" id="show-pollution-button">
             <input type="checkbox" name="" id="" checked>
-            Show pollution
+            污染元胞
         </div><br>
         <div class="cesium-button" id="show-depth-button">
             <input type="checkbox" name="" id="">
-            Depth against
+            深度检测
         </div><br>
         <div class="cesium-button" id="show-imagery-layers">
             <input type="checkbox" name="" id="" checked>
-            Imagery layers
+            影像
         </div>
         <div class="cesium-button" id="show-terrain">
             <input type="checkbox" name="" id="" checked>
-            Terrain
+            地形
         </div><br>
         <div class="cesium-button" id="clip-enable">
             <input type="checkbox" name="" id="" checked>
-            Clip enable
+            开挖
         </div>
         <div class="cesium-button" id="clip-direction">
-            Clip direction
+            切换开挖方向
         </div><br>
 
         <div class="cesium-button" id="look-at" >
             <input type="checkbox" name="" id="" checked>
-            Look at
+            固定视角
         </div>
 
     </div>

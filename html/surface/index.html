@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>地表污染扩散三维仿真</title>
     <!-- <script src="https://cesium.com/downloads/cesiumjs/releases/1.89/Build/Cesium/Cesium.js"></script> -->
     <link rel="stylesheet" href="../../CesiumUnminified/Widgets/widgets.css">
     <link rel="stylesheet" href="../../css/bucket.css">
@@ -39,73 +39,73 @@
 <body>
     <div id="cesiumContainer" class="fullSize"></div>
     <div>
-        <div class="cesium-button" id="set-view">Set view</div>
-        <div class="cesium-button" id="reset">Reset</div><br>
-        <div class="cesium-button" id="init">Init</div>
-        <div class="cesium-button" id="simulate">Simulate</div>
-        <div class="cesium-button" id="time">0 min</div><br>
+        <div class="cesium-button" id="set-view">定位</div>
+        <div class="cesium-button" id="reset">重置</div><br>
+        <div class="cesium-button" id="init">初始化</div>
+        <div class="cesium-button" id="simulate">模拟</div>
+        <div class="cesium-button" id="time">0 分钟</div><br>
     
         <div>
             <div class="xl-bac" >
-                <span>Rain (mm/h)</span>
+                <span>降雨强度 (mm/h)</span>
                 <input type="text" value="35" id="rain-text" size="1">
-                <span>Rain time(min)</span>
+                <span>降雨时长(min)</span>
                 <input type="text" value="10" id="rain-time-text" size="1">
-                <span>Rain out(mm/h)</span>
+                <span>降雨渗出强度(mm/h)</span>
                 <input type="text" value="30" id="rain-out-text" size="1">
             </div>
-            <button class="cesium-button" id="set-rain-param">Confirm</button>
+            <button class="cesium-button" id="set-rain-param">提交</button>
         </div>
        
         
         <div>
             <div class="xl-bac" >
-                <span>Time (min)</span>
+                <span>时长(min)</span>
                 <input type="range" max="24" min="0.1" step="0.1" value="5" id="time-range">
                 <input type="text" value="5" size="1" id="time-text">
             </div>
-            <button class="cesium-button" id="simulate-with-time">Simulate with time</button>
+            <button class="cesium-button" id="simulate-with-time">给定时间模拟</button>
         </div>
 
         <div>
             <div class="xl-bac" >
-                <span>Number</span>
+                <span>次数</span>
                 <input type="range" max="10" min="1" step="1" value="5" id="number-range">
                 <input type="text" value="5" size="1" id="number-text">
             </div>
-            <button class="cesium-button" id="simulate-with-number">Simulate with number</button>
+            <button class="cesium-button" id="simulate-with-number">给定推演次数模拟</button>
         </div>
         <div class="cesium-button" id="rectangle-division">
             <input type="checkbox">
-            Rectangle division
+            元胞网格
         </div><br>
         <div class="cesium-button" id="show-terrain">
             <input type="checkbox" name="" id="" checked>
-            Terrain
+            地形
         </div>
         <div class="cesium-button" id="is-clip">
             <input type="checkbox" name="" id="" checked>
-            Clip
+            开挖
         </div><br>
     
         <div>
             <div class="xl-bac" >
-                <span>Time (min)</span>
+                <span>时长 (min)</span>
                 <input type="range" max="60" min="1" step="1" value="5" id="rain-time-time-range">
                 <input type="text" value="5" size="1" id="rain-time-time-text">
             </div>
-            <button class="cesium-button" id="rain-time-time">Rain with time by time</button>
+            <button class="cesium-button" id="rain-time-time">雨强变化下的模拟</button>
         </div>
         <div>
             <div class="xl-bac" >
-                <span>Step(number)</span>
+                <span>次数(number)</span>
                 <input type="range" max="30" min="1" step="1" value="10" id="step-range">
                 <input type="text" value="10" size="1" id="step-text">
             </div>
-            <button class="cesium-button" id="step-cli">Simulate by step</button>
+            <button class="cesium-button" id="step-cli">给定次数模拟</button>
         </div>
 
-        <div class="cesium-button" id="random-color">Random color</div>
+        <div class="cesium-button" id="random-color">随机切换颜色</div>
     
     </div>
 

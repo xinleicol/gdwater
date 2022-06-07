@@ -201,8 +201,10 @@ $('#multi-points-wm').click(function (e) {
 });
 $('#reset').click(function (e) { 
     e.preventDefault();
+    $('#continue-simulate').children("input").prop('checked', true)
     viewer.dataSources.removeAll();
     splite.enableClip(false)
+    
 });
 $('#show-pollution-button').click(function (e) { 
     if(gdwaterParam.computerGdwater3){

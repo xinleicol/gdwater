@@ -115,7 +115,7 @@ class Middleware extends Computer {
         let style = {
             outline: true,
             fill: false,
-            outlineColor: Cesium.Color.RED,
+            outlineColor: Cesium.Color.WHITE,
         }
         Object.assign(s, style);
         if (this._computerRectangle) {

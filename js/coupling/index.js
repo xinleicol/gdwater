@@ -428,7 +428,7 @@ $(document).ready(() => {
 $('#reset').click(function (e) { 
     e.preventDefault();
 
-    surfaceCell = undefined //元胞网格对象
+     surfaceCell = undefined //元胞网格对象
     vadoseZoneCell = undefined //元胞网格对象
     gdwaterLevelCell = undefined //元胞网格对象
 

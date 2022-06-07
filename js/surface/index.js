@@ -25,8 +25,10 @@ let boundingPositions = [
 
 const xlParma = {
     boundingPositions : false, //边界采样点
-    divisionColor: 'rgb(1,0,0)',//划分的小矩形的css颜色
+    divisionColor: 'rgb(255,0,0)',//划分的小矩形的css颜色
     terrainExagNumber: 1,//地形夸张程度
+    time:null,//时间
+    timeCon:document.getElementById('time'), //控件
 }
 
 /**
@@ -35,12 +37,12 @@ const xlParma = {
  * @param {是否生成划分网格} flag 
  * @returns 
  */
-async function init(size=[0.5,0.5], flag=true) {
+async function init(size=[5,5], flag=true) {
     viewer.terrainProvider = Cesium.createWorldTerrain()
     // viewer.scene.globe.terrainExaggeration = 2
 
     //中间件
-    middleware = new Middleware(viewer, boundingPositions)//boundingPositions
+    middleware = new Middleware(viewer)//boundingPositions
 
     // 设置参数
     middleware.size = size
@@ -146,8 +148,8 @@ function rainTime(time) {
 function showTime() {
     runTime = (Date.now() - oldTime) / 1000 / 60; //分钟
     runTime = runTime.toFixed(2);
-    document.getElementById('time').innerText = runTime + "min"
-    requestAnimationFrame(showTime);
+    xlParma.timeCon.innerText = runTime + "min"
+    xlParma.time =  requestAnimationFrame(showTime);
 }
 
 
@@ -223,9 +225,11 @@ $('#reset').click(function (e) {
     if (withTime) {
         withTime.clearAll();
     }
-    // withTime = null;
-    // surfaceCell = null;
+    cancelAnimationFrame(xlParma.time)
+    withTime = null;
+    surfaceCell = null;
     viewer.dataSources.removeAll();
+    middleware.drawPoints(Boolean(false));
 });
 $('#simulate-with-time').click(function (e) {
     e.preventDefault();
@@ -233,7 +237,7 @@ $('#simulate-with-time').click(function (e) {
 });
 $('#time-range').change(function (e) {
     e.preventDefault();
-    $('#time-text').val($('#number-text').val())
+    $('#time-text').val($('#time-range').val())
 });
 $('#number-range').change(function (e) {
     e.preventDefault();

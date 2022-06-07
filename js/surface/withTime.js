@@ -130,7 +130,7 @@ class WithTime {
             if (arrs.length == 0) {
                 continue;
             }
-            arrs = this._sort(arrs, "time");
+            this._sort(arrs, "time");
             realTime = arrs[arrs.length - 1].time / 60;
             for (const element of arrs) {
                 if (time * 60 >= element.time) {
@@ -157,8 +157,8 @@ class WithTime {
     _updateColor(spreadCells) {
         // this._computerColor.startColor = Cesium.Color.fromCssColorString("#0b486b", new Cesium.Color());
         // this._computerColor.endColor = Cesium.Color.fromCssColorString("#f56217", new Cesium.Color());
-        this._computerColor.startColor = Cesium.Color.ROYALBLUE
-        this._computerColor.endColor = Cesium.Color.DARKORANGE
+        // this._computerColor.startColor = Cesium.Color.ROYALBLUE
+        // this._computerColor.endColor = Cesium.Color.DARKORANGE
         this._computerColor.setColorToCell(spreadCells);
         // this._computerColor.setColorToCellWhatever(spreadCells);
         for (let i = 0; i < spreadCells.length; i++) {
