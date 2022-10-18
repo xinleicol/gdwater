@@ -46,10 +46,12 @@ class HeightMatrix {
     _getHeightMatrix(resolve) {
         let positions = XLType.extractArrs(this._recDaos, 'centerCarto')
         let promise = Cesium.sampleTerrainMostDetailed(viewer.terrainProvider, positions)
-        Cesium.when(promise,  updatedPositions => {
-           this._productMatrix(updatedPositions)
-           resolve(this._m)
-        });
+        
+        promise.then(updatedPositions => {
+            this._productMatrix(updatedPositions)
+            resolve(this._m)
+        })
+       
 
     }
 
@@ -80,9 +82,9 @@ class HeightMatrix {
     getHeight(positions){
         return new Promise(resolve => {    
             let promise = Cesium.sampleTerrainMostDetailed(viewer.terrainProvider, positions)
-            Cesium.when(promise,  updatedPositions => {
+            promise.then((updatedPositions) => {
                 resolve(updatedPositions);
-            });
+            })
         })
         
     }

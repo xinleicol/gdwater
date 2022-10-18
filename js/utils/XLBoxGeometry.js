@@ -5,6 +5,8 @@ import PolylineLightingTrailMaterialProperty from '../material/property/Polyline
 import addPolylineLightingTrailType from '../material/type/polylineLightingTrail.js'
 import XLType from './XLType.js'
 
+const IMGURL = "/Public/Images/arrow.png"
+
 class XLBoxGeometry extends XLBox {
     _centerPoint = null
     _centerOffset = null //中心点偏移量
@@ -25,6 +27,7 @@ class XLBoxGeometry extends XLBox {
         set changeOutlineColor(color){this.outlineColor = color;} ,
         isID: true //是否给实体添加id属性，为了避免id重复，暂时这样写
     }
+    
     constructor(centerPoint, dimensions, offsets) {
         super()
         this._centerPoint = centerPoint
@@ -260,7 +263,7 @@ class XLBoxGeometry extends XLBox {
                 material: new PolylineImageTrailMaterialProperty({
                     color: color,
                     speed: 10,
-                    image: '../../image/arrow.png',
+                    image: IMGURL,
                     repeat: {
                         x: 1,
                         y: 1
@@ -296,7 +299,7 @@ class XLBoxGeometry extends XLBox {
                 material: new PolylineLightingTrailMaterialProperty({
                     color: color,
                     speed: 5.0,
-                    image: '../../image/lighting.png',
+                    image: IMGURL,
                 }),
             }
         });

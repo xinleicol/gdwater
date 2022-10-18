@@ -157,7 +157,7 @@ class GdwaterLevelMatrix {
         let bbox = [lon - this._minDivide, lat - this._minDivide,
             lon + this._minDivide, lat + this._minDivide
         ]
-        let url = 'http://localhost:8089/geoserver/water/wms?' +
+        let url = 'http://localhost:9000/geoserver/water/wms?' +
             'request=GetFeatureInfo' +
             '&service=WMS' +
             '&version=1.1.1' +

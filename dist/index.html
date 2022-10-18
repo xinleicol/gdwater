@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>污染物包气带扩散仿真</title>
+
+<script defer src="main.js"></script></head>
+
+<body>
+    <div id="cesiumContainer" class="fullSize"></div>
+    <div class="toolbar">
+        <div class="cesium-button" id="reset">重置</div><br>
+        <div class="cesium-button" id="pause-main">
+            <input type="checkbox" name="" id="">
+            暂停
+        </div>
+        <div class="cesium-button" id="main">模拟</div><br>
+        <div>
+            <div class="xl-bac">
+                <span>随机污染源</span>
+                <input type="range" max="10" min="1" step="1" value="3" id="points-number-range">
+                <input type="text" value="3" size="1" id="points-number-text">
+            </div>
+            <button class="cesium-button" id="points-simulate">模拟</button>
+        </div>
+        <div class="cesium-button" id="big-show">
+            <input type="checkbox" name="" id="">
+            包围盒
+        </div>
+        <div class="cesium-button" id="small-show">
+            <input type="checkbox" name="" id="" checked>
+            污染元胞
+        </div><br>
+        <div class="cesium-button" id="change-color">随机变换颜色</div><br>
+        <div class="cesium-button" id="show-water-line">
+            <input type="checkbox" name="" id="">
+            水头梯度方向
+        </div><br>
+        <div class="cesium-button" id="show-cell-box">
+            <input type="checkbox" name="" id="">
+            元胞空间
+        </div><br>
+        <div class="cesium-button" id="depthTestAgainstTerrain">
+            <input type="checkbox" name="" id="">
+            地形深度检测
+        </div>
+
+        <div>
+            <div class="xl-bac">
+                <input type="checkbox" name="" id="terrain-checked" checked>
+                <span>地形夸张</span>
+                <input type="range" max="10" min="1" step="0.1" value="1" id="terrain-exag-range">
+                <input type="text" value="1" size="1" id="terrain-exag-text">
+            </div>
+        </div>
+        
+        <div>
+            <div class="xl-bac">
+                <input type="checkbox" name="" id="water-checked">
+                <span>地下水位夸张</span>
+                <input type="range" max="20" min="1" step="0.1" value="1" id="water-exag-range">
+                <input type="text" value="1" size="1" id="water-exag-text">
+            </div>
+        </div>
+
+        <div class="cesium-button" id="clip-enable">
+            <input type="checkbox" name="" id="" checked>
+            开挖
+        </div>
+        <div class="cesium-button" id="clip-direction">
+            切换开挖方向
+        </div><br>
+    </div>
+</body>
+
+</html>

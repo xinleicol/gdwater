@@ -6,9 +6,6 @@ import Splite from "../utils/dispose/Splite.js";
 import GdwaterLevelMatrix from "../utils/transform/GdwaterLevelMatrix.js";
 import HeightMatrix from "../utils/transform/HeightMatrix.js";
 
-
-
-
 let boundingPositions = [
     [118.7426057038760, 32.2504552130810],
     [118.7429255928240, 32.2497469657935],
@@ -59,7 +56,7 @@ async function main(isPause = false, isRandom = false, number = 3) {
 
     // 计算开挖
     splite = new Splite(0, 0, boundingPositions)
-    splite.setCellSize(2.0, 2.0)//更改元胞大小
+    splite.setCellSize(5.0, 5.0)//更改元胞大小
     splite.dispose()
     const [rec, rectangleCellDao, recdaos] = [splite._rectangle, splite._rectangleCellDao, splite._recdaos]
 
@@ -130,7 +127,7 @@ function computer(vadoseZoneCell, computerVadoseDao2, func) {
             timer = setInterval(() => {
                 func.call(vadoseZoneCell)
                 nextPollutedArea = vadoseZoneCell.nextPollutedArea
-                console.log(nextPollutedArea.length);
+                // console.log(nextPollutedArea.length);
                 computerVadoseDao2.updateColor(vadoseZoneCell.isPollutedArea)
                 if (nextPollutedArea.length === 0) clearInterval(timer)
             }, 2000);
