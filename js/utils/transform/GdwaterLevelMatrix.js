@@ -105,9 +105,9 @@ class GdwaterLevelMatrix {
         for (let i = 0; i < this._m.length; i++) {
             let element = this._m[i]
             for (let j = 0; j < element.length; j++) {
-                if (j === element.length - 1) {
+                // if (j === element.length - 1) {
 
-                }
+                // }
                 let rectangle = this._rd[n].rectangle
                 let west = rectangle.west
                 let south = rectangle.south
